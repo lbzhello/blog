@@ -6,7 +6,8 @@
 *********
 
 1. [为什么需要消息系统？](#why-mq)
-2. [kafka架构？](#kafka-struct)
+2. [kafka架构？](#kafka-cons)
+3. [Producer如何发送消息？](#producer)
 
 <span id="why-mq"></span>
 ## 为什么需要消息系统？  
@@ -33,10 +34,10 @@
 
 这样通过引入消息中间件，使各个系统都与MQ交互，从而避免它们之间的错综复杂的调用关系。
 
-<span id="kafka-struct"></span>
+<span id="kafka-cons"></span>
 ## Kafka架构  
 
-![kafka](/img/kafka/kafka.png)
+![kafka](/img/kafka/kafka-cons.png)
 
 #### 名词解释：  
 
@@ -56,7 +57,7 @@ kafka 集群中包含的服务器。
 消息的类别。每条消息都属于某个topic，producer将消息发送到指定topic，consumer订阅相应topic的消息
 
 6. partition  
-kafka分配的单位，物理上的概念,相当于一个目录，目录下的日志文件属于这个partition。每个topic分为多个partition；producer可以将消息发送到topic的指定partition。
+kafka分配的单位，物理上的概念,相当于一个目录，目录下的日志文件构成这个partition。每个topic分为多个partition；producer可以将消息发送到topic的指定partition。
 
 7. replica  
 partition的副本，保障 partition 的高可用。
@@ -72,6 +73,16 @@ kafka 集群中的其中一个服务器，用来进行 leader election 以及 �
 
 12. zookeeper  
 kafka 通过 zookeeper 来存储集群的 meta 信息。比如服务器中leader信息，topic，partition在broker中的位置，consumer中消费消息的offset等。
+
+#### Topic
+
+每个publish到kafka的消息都有一个topic，一个topic对应物理上的多个partition,位于不同的broker上。每个partition是一个顺序的追加日志，属于顺序写磁盘（顺序写磁盘效率比随机写内存要高，保障 kafka 吞吐率）。其结构如下
+
+![kafka topic](/img/kafka/topic.png)
+
+<span id="producer"></span>
+## Prodecer如何发送消息
+
 
 
 
