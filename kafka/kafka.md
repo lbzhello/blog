@@ -38,6 +38,42 @@
 
 ![kafka](/img/kafka/kafka.png)
 
+#### 名词解释：  
+
+1. broker  
+kafka 集群中包含的服务器。
+
+2. producer  
+消息生产者。
+
+3. consumer  
+消息消费者
+
+4. consumer group  
+每个 consumer 都属于一个 consumer group，每条消息只能被 consumer group 中的一个 consumer 消费，但可以被多个 consumer group 消费。
+
+5. topic  
+消息的类别。每条消息都属于某个topic，producer将消息发送到指定topic，consumer订阅相应topic的消息
+
+6. partition  
+kafka分配的单位，物理上的概念,相当于一个目录，目录下的日志文件属于这个partition。每个topic分为多个partition；producer可以将消息发送到topic的指定partition。
+
+7. replica  
+partition的副本，保障 partition 的高可用。
+
+8. leader  
+replica 中的一个角色， producer 和 consumer 只跟 leader 交互。
+
+9. follower  
+replica 中的一个角色，从 leader 中复制数据。
+
+10. controller  
+kafka 集群中的其中一个服务器，用来进行 leader election 以及 各种 failover。
+
+12. zookeeper  
+kafka 通过 zookeeper 来存储集群的 meta 信息。比如服务器中leader信息，topic，partition在broker中的位置，consumer中消费消息的offset等。
+
+
 
 ****
 参考：  
