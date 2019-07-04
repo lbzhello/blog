@@ -39,8 +39,6 @@
 
 ![kafka](/img/kafka/kafka-cons.png)
 
-#### 名词解释：  
-
 1. broker  
 kafka 集群中包含的服务器。
 
@@ -54,10 +52,10 @@ kafka 集群中包含的服务器。
 每个 consumer 都属于一个 consumer group，每条消息只能被 consumer group 中的一个 consumer 消费，但可以被多个 consumer group 消费。
 
 5. topic  
-消息的类别。每条消息都属于某个topic，producer将消息发送到指定topic，consumer订阅相应topic的消息
+消息的类别。每条消息都属于某个topic，不同的topic之间是相互独立的，即kafka是面向topic的。
 
 6. partition  
-kafka分配的单位，物理上的概念,相当于一个目录，目录下的日志文件构成这个partition。每个topic分为多个partition；producer可以将消息发送到topic的指定partition。
+每个topic分为多个partition，partition是kafka分配的单位。kafka物理上的概念，相当于一个目录，目录下的日志文件构成这个partition。
 
 7. replica  
 partition的副本，保障 partition 的高可用。
@@ -74,18 +72,56 @@ kafka 集群中的其中一个服务器，用来进行 leader election 以及 �
 12. zookeeper  
 kafka 通过 zookeeper 来存储集群的 meta 信息。比如服务器中leader信息，topic，partition在broker中的位置，consumer中消费消息的offset等。
 
-#### Topic
+#### Topic and Logs
 
-每个publish到kafka的消息都有一个topic，一个topic对应物理上的多个partition,位于不同的broker上。每个partition是一个顺序的追加日志，属于顺序写磁盘（顺序写磁盘效率比随机写内存要高，保障 kafka 吞吐率）。其结构如下
+Message是按照topic来组织的，每个topic可以分成多个的partition。每个partition是一个顺序的追加日志，属于顺序写磁盘（顺序写磁盘效率比随机写内存要高，保障 kafka 吞吐率）。其结构如下
 
 ![kafka topic](/img/kafka/topic.png)
+
+partition中的每条Message包含三个属性：offset, MessageSize和data。其中offset表示消息偏移量，即消息的逻辑位置；MessageSize为表示data有多大；data为message的具体内容。
+
+partition是以文件的形式存储在文件系统中(由配置文件中的log.dirs指定的)，其命名规则为\<topic_name\>-\<partition_id\>。
+
+比如，topic为page_visits的消息，分为5个partition，其目录结构为(partition可能位于不同的broker上)：
+
+![partition](/img/kafka/partition.png)
+
+partition是分段的，每个段叫LogSegment，包括了一个数据文件和一个索引文件，下图是某个partition目录下的文件：
+
+![log-segment](/img/kafka/log-segment.png)
+
+index为稀疏存储，不会每一个message都记录下具体位置，而是每隔一定字节的数建立一条索引，避免索引文件占用过多的空间。缺点是没有建立索引的offset不能一次定位到message的位置，需要做一次顺序扫描，但是扫描的范围很小。
+
+索引包含两个部分（均为4个字节的数字），分别为相对offset和position。相对offset表示某个LogSegment的offset，position表示Message在数据文件中的位置。
+
+总结：Kafka的Message存储采用了分区(partition)，分段(LogSegment)和稀疏索引这几个手段来达到了高效性
 
 <span id="producer"></span>
 ## Prodecer如何发送消息
 
+Producer首先将消息封装进一个ProducerRecord实例中。
 
+![producer-record](/img/kafka/producer-record.png)
 
+#### 消息路由
+1. 发送消息时如果指定了partition，则直接使用；
+2. 如果指定了key，则对key进行哈希，选出一个partition。这个hash函数由配置文件的partitioner.class指定，也叫分区机制；
+3. 如果都未指定，通过round-robin来选partition。
+
+消息并不会立即发送，而是先进行序列化后，发送给Partitioner，也就是上面提到的hash函数，由Partitioner确定目标分区后，发送到一块内存缓冲区中（发送队列）。Producer的另一个工作线程（即Sender线程），则负责实时地从该缓冲区中提取出准备好的消息封装到一个批次内，统一发送到对应的broker中。其过程大致是这样的：
+
+![producer](/img/kafka/producer.png)
 
 ****
 参考：  
-[1]: https://github.com/doocs/advanced-java/blob/master/docs/high-concurrency/why-mq.md
+[1]: [kafka学习笔记：知识点整理][1]   
+[2]: [advanced-java][2]  
+[3]: [Kafka的Log存储解析][3]  
+[4]: [kafka生产者Producer参数设置及参数调优建议-商业环境实战系列][4]  
+[5]: [震惊了！原来这才是kafka！][5]
+
+[1]: https://www.cnblogs.com/cyfonly/p/5954614.html  
+[2]: https://github.com/doocs/advanced-java/blob/master/docs/high-concurrency/why-mq.md  
+[3]: https://blog.csdn.net/jewes/article/details/42970799  
+[4]: https://blog.csdn.net/shenshouniu/article/details/83515413
+[5]: https://www.jianshu.com/p/d3e963ff8b70
