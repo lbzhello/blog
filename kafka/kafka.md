@@ -1,13 +1,19 @@
 ## 什么是消息队列？
 简单来说，消息队列是存放消息的容器。客户端可以将消息发送到消息服务器，也可以从消息服务器获取消息。  
 
-发出疑问？  
+问题导读  
 
 *********
 
-1. [为什么需要消息系统？](#why-mq)
-2. [kafka架构？](#kafka-cons)
-3. [Producer如何发送消息？](#producer)
+1. [为什么需要消息系统?](#why-mq)
+2. [kafka架构?](#kafka-cons)
+3. [kafka如何存储消息?](#topic-and-logs)
+4. [Producer如何发送消息?](#producer)
+5. [Consumer如何消费消息?](#consumer-fetch-message)
+6. [Offset如何保存?](#offset-save)
+7. [如何保证消息不被重复消费?](#mq-repeat)
+8. [如何保证消息的可靠性传输?](#mq-reliability)
+9. [如何保证消息的顺序性?](#mq-order)
 
 <span id="why-mq"></span>
 ## 为什么需要消息系统？  
@@ -75,7 +81,7 @@ kafka 集群中的其中一个服务器，用来进行 leader election 以及 �
 12. zookeeper  
 kafka 通过 zookeeper 来存储集群的 meta 信息。
 ```
-
+<span id="topic-and-logs"></span>
 #### Topic and Logs
 
 Message是按照topic来组织的，每个topic可以分成多个partition（对应server.properties/num.partitions）。partition是一个顺序的追加日志，属于顺序写磁盘（顺序写磁盘效率比随机写内存要高，保障 kafka 吞吐率）。其结构如下
@@ -210,11 +216,12 @@ Producer首先将消息封装进一个ProducerRecord实例中。
 
 4. consumer向coordinator发送SyncGroupRequest，其中leader的SyncGroupRequest会包含分配的情况。coordinator回包，把分配的情况告诉consumer，包括leader。
 
+<span id="consumer-fetch-message"></span>
 #### Consumer Fetch Message
 
 Consumer 采用"拉模式"消费消息，这样 consumer 可以自行决定消费的行为。
 
-Consumer 通过调用 poll(duration: int), 从服务器拉取消息。拉取消息的具体行为由下面的配置项决定：
+Consumer 调用 poll(duration) 从服务器拉取消息。拉取消息的具体行为由下面的配置项决定：
 
     #consumer.properties
 
@@ -241,6 +248,7 @@ Consumer A 和 Consumer B 属于不同的 Consumer Group。Cosumer A 读取到 o
 
 下次从 offset = 9 开始读取的 Consumer 并不一定还是 Consumer A 因为可能发生 rebalance
 
+<span id="offset-save"></span>
 #### offset的保存
 
 Consumer 消费 partition 时，需要保存 offset 记录当前消费位置。
@@ -255,14 +263,21 @@ offset 可以选择自动提交或调用 Consumer 的 commitSync() 或 commitAsy
 
 offset 保存在名叫 __consumeroffsets 的 topic 中。写消息的 key 由 groupid、topic、partition 组成，value 是 offset。
 
-一般情况下，每个key的offset都是缓存在内存中，查询的时候不用遍历partition，如果没有缓存，第一次就会遍历 partition 建立缓存，然后查询返回。
+一般情况下，每个 key 的 offset 都是缓存在内存中，查询的时候不用遍历partition，如果没有缓存，第一次就会遍历 partition 建立缓存，然后查询返回。
 
 __consumeroffsets 的 partition 数量由下面的 server 配置决定：
 
     offsets.topic.num.partitions=50
 
-我们知道每个 partition 只能被同一个 Consumer Group 的一个 Consumer 消费，因此 Consumer 的 offset 存放在 ```groupId.hashCode() mode groupMetadataTopicPartitionCount```分区上，groupMetadataTopicPartitionCount 是上面配置的分区数。
+offset 保存在哪个分区上，即 __consumeroffsets 的分区机制，可以表示为:  
 
+    groupId.hashCode() mode groupMetadataTopicPartitionCount
+
+groupMetadataTopicPartitionCount 是上面配置的分区数。
+
+> 因为一个 partition 只能被同一个 Consumer Group 的一个 consumer 消费，因此可以用 groupId 表示此 consumer 消费 offeset 所在分区
+
+<span id="problems"></span>
 ## 消息系统可能遇到那些问题
 
 kafka支持3种消息投递语义  
@@ -273,11 +288,13 @@ kafka支持3种消息投递语义
    获取数据 -> 业务处理 -> commit offset。 
 3. exactly once：只且一次，消息不丢失不重复，只且消费一次（0.11中实现，仅限于下游也是kafka）
 
+<span id="mq-repeat"></span>
 #### 如何保证消息不被重复消费？（消息的幂等性）
 
 对于更新操作，天然具有幂等性。  
 对于新增操作，可以给每条消息一个唯一的id，处理前判断是否被处理过。这个id可以存储在 Redis 中，如果是写数据库可以用主键约束。
 
+<span id="mq-reliability"></span>
 #### 如何保证消息的可靠性传输？（消息丢失的问题）
 
 **消费端弄丢了数据**
@@ -301,6 +318,7 @@ kafka支持3种消息投递语义
 
 在 producer 端设置 acks=all，保证所有的ISR都同步了消息才认为写入成功。
 
+<span id="mq-order"></span>
 #### 如何保证消息的顺序性？
 
 kafka 中 partition 上的消息是顺序的，可以将需要顺序消费的消息发送到同一个 partition 上，用单个 consumer 消费。
