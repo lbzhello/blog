@@ -73,7 +73,7 @@ replica 中的一个角色，从 leader 中复制数据。
 kafka 集群中的其中一个服务器，用来进行 leader election 以及 各种 failover。
 
 12. zookeeper  
-kafka 通过 zookeeper 来存储集群的 meta 信息。比如服务器中leader信息，topic，partition在broker中的位置，consumer中消费消息的offset等。
+kafka 通过 zookeeper 来存储集群的 meta 信息。
 ```
 
 #### Topic and Logs
@@ -182,6 +182,85 @@ Producer首先将消息封装进一个ProducerRecord实例中。
 
 > 图片来自[123archu](https://www.jianshu.com/p/d3e963ff8b70)
 
+## Consumer如何消费消息 
+
+每个Consumer都划归到一个逻辑Consumer Group中，一个partition只能被同一个Consumer Group中的一个Consumer消费，但可以被不同的Consumer Group消费。
+
+某个 Topic 的 partition 数量为 p，某个 Consumer Group 中订阅此 tiopic 的 consumer 数量为 c; 则： 
+
+    p < c: 会有 c - p 个 consumer闲置，造成浪费
+    p > c: 一个 consumer 对应多个 partition 
+    p = c: 一个 consumer 对应一个 partition
+
+应该合理分配consumer和partition的数量，避免造成资源倾斜，最好partiton数目是consumer数目的整数倍。
+
+#### 如何将Partition分配给Consumer
+
+生产过程中broker要分配partition，消费过程这里，也要分配partition给消费者。类似broker中选了一个controller出来，消费也要从broker中选一个coordinator，用于分配partition。
+
+当 partition 或 consumer 数量发生变化时，比如 增加 consumer, 减少 consumer(主动或被动)，增加 partition，都会进行 rebalance。
+
+其过程如下：
+
+1. consumer 给 coordinator 发送 JoinGroupRequest 请求。这时其他consumer 发 heartbeat 请求过来时，coordinator 会告诉他们，要 rebalance了。其他 consumer 也发送 JoinGroupRequest 请求。
+   
+2. coordinator在consumer中选出一个leader，其他作为 follower，通知给各个 consumer，对于leader，还会把 follower 的 metadata 带给它。
+   
+3. consumer leader 根据 consumer metadata 重新分配 partition
+
+4. consumer向coordinator发送SyncGroupRequest，其中leader的SyncGroupRequest会包含分配的情况。coordinator回包，把分配的情况告诉consumer，包括leader。
+
+#### Consumer Fetch Message
+
+Consumer 采用"拉模式"消费消息，这样 consumer 可以自行决定消费的行为。
+
+Consumer 主动调用 poll(duration: int), 从服务器拉取消息。拉取消息的具体行为由下面的 Consumer 配置项决定：
+
+    #消费者最多 poll 多少个 record
+    max.poll.records=500
+
+    #消费者 poll 时 partition 返回的最大数据量
+    max.partition.fetch.bytes=1048576
+    
+    #Consumer 最大 poll 间隔
+    #超过此值服务器会认为此 consumer failed 
+    #并将此 consumer 踢出对应的 consumer group 
+    max.poll.interval.ms=300000
+
+在 partition 中，每个消息都有一个 offset。新消息会被写到 partition 末尾（最新的一个 segment 文件末尾）， 每个 partition 上的消息是顺序消费的，不同的 partition 之间消息的消费顺序是不确定的。
+
+若某个 consumer 消费多个 partition, 则各个 partition 之前消费顺序是不确定的，但在每个 partition 上是顺序消费。 
+
+若来自不同 consumer group 的多个 consumer 消费同一个 partition，则各个 consumer 之间的消费互不影响，每个 Consumer 都会有自己的 offset。
+
+![producer](/img/kafka/log-consumer.png)
+
+Consumer A 和 Consumer B 属于不同的 Consumer Group。Cosumer A 读取到 offset = 9， Consumer B 读取到 offset = 11，这个值表示下次读取的位置。也就是说 Consumer A 已经读取了 offset 为 0 ~ 8 的消息，Consumer B 已经读取了 offset 为 0 ～ 10 的消息。
+
+下次从 offset = 9 开始读取的 Consumer 并不一定还是 Consumer A 因为可能发生 rebalance
+
+#### offset的保存
+
+Consumer 消费 partition 时，需要保存 offset 记录当前消费位置。
+
+offset 可以选择自动提交或调用 Consumer 的 commitSync() 或 commitAsync() 手动提交，相关配置为：
+    
+    #是否自动提交 offset
+    enable.auto.commit=true
+
+    #自动提交间隔， enable.auto.commit=true 时有效
+    auto.commit.interval.ms=5000
+
+offset 保存在名叫 __consumeroffsets 的 topic 中。写消息的 key 由 groupid、topic、partition 组成，value 是 offset。
+
+一般情况下，每个key的offset都是缓存在内存中，查询的时候不用遍历partition，如果没有缓存，第一次就会遍历 partition 建立缓存，然后查询返回。
+
+__consumeroffsets 的 partition 数量由下面的 server 配置决定：
+
+    offsets.topic.num.partitions=50
+
+我们知道每个 partition 只能被同一个 Consumer Group 的一个 Consumer 消费，因此 Consumer 的 offset 存放在 ```groupId.hashCode() mode groupMetadataTopicPartitionCount```分区上，groupMetadataTopicPartitionCount 是上面配置的分区数。
+
 ****
 参考：  
 [1]: [kafka学习笔记：知识点整理][1]   
@@ -189,7 +268,8 @@ Producer首先将消息封装进一个ProducerRecord实例中。
 [3]: [Kafka的Log存储解析][3]  
 [4]: [kafka生产者Producer参数设置及参数调优建议-商业环境实战系列][4]  
 [5]: [震惊了！原来这才是kafka！][5]  
-[6]: [kafka configuration][6]
+[6]: [kafka configuration][6]  
+[7]: [kafka 2.3.0 API][7]
 
 [1]: https://www.cnblogs.com/cyfonly/p/5954614.html  
 [2]: https://github.com/doocs/advanced-java/blob/master/docs/high-concurrency/why-mq.md  
@@ -197,3 +277,4 @@ Producer首先将消息封装进一个ProducerRecord实例中。
 [4]: https://blog.csdn.net/shenshouniu/article/details/83515413
 [5]: https://www.jianshu.com/p/d3e963ff8b70
 [6]: http://kafka.apache.org/documentation/#configuration
+[7]: http://kafka.apache.org/23/javadoc/index.html
