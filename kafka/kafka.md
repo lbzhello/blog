@@ -149,7 +149,7 @@ kafka 在 zookeeper 中（/brokers/topics/[topic]/partitions/[partition]/state�
 5. 通过 RPC 向相关 broker 发送 leaderAndISRRequest 命令
 ```
 
-当ISR为空时，会选一个 replica（不一定是 ISR 成员）作为leader;当所有的 replica 都歇菜了，会等任一个 replica 复活，将其作为leader。
+当ISR为空时，会选一个 replica（不一定是 ISR 成员）作为leader;当所有的 replica 都歇菜了，会等任意一个 replica 复活，将其作为leader。
 
 ISR(同步列表)中的follower都"跟上"了leader，"跟上"并不表示完全一致，它由 server.properties/replica.lag.time.max.ms 配置，表示leader等待follower同步消息的最大时间，如果超时，leader将follower移除ISR。
 
@@ -191,7 +191,7 @@ Producer首先将消息封装进一个ProducerRecord实例中。
 
 每个Consumer都划归到一个逻辑Consumer Group中，一个partition只能被同一个Consumer Group中的一个Consumer消费，但可以被不同的Consumer Group消费。
 
-若 topic 的 partition 数量为 p，Consumer Group 中订阅此 tiopic 的 consumer 数量为 c; 则： 
+若 topic 的 partition 数量为 p，Consumer Group 中订阅此 topic 的 consumer 数量为 c; 则： 
 
     p < c: 会有 c - p 个 consumer闲置，造成浪费
     p > c: 一个 consumer 对应多个 partition 
@@ -298,9 +298,9 @@ kafka支持3种消息投递语义
 
 **消费端弄丢了数据**
 
-当 server.properties/enable.auto.commit 设置为 true 的时候，kafka 会先 commit offset 在处理消息，如果这时候出现以异常，这条消息就丢失了。
+当 server.properties/enable.auto.commit 设置为 true 的时候，kafka 会先 commit offset 再处理消息，如果这时候出现异常，这条消息就丢失了。
 
-因此可以关闭自动提交 offset，在处理完成后手动提交 offset，这样可以保证消息不丢失；但是如果在提交 offset 失败，可能导致重复消费的问题， 这时保证幂等性即可。
+因此可以关闭自动提交 offset，在处理完成后手动提交 offset，这样可以保证消息不丢失；但是如果提交 offset 失败，可能导致重复消费的问题， 这时保证幂等性即可。
 
 **Kafka弄丢了消息**
 
