@@ -296,6 +296,8 @@ kafka支持3种消息投递语义
 <span id="mq-reliability"></span>
 #### 如何保证消息的可靠性传输？（消息丢失的问题）
 
+根据kafka架构，有三个地方可能丢失消息：Consumer，Producer和 Server
+
 **消费端弄丢了数据**
 
 当 server.properties/enable.auto.commit 设置为 true 的时候，kafka 会先 commit offset 再处理消息，如果这时候出现异常，这条消息就丢失了。
