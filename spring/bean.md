@@ -41,7 +41,7 @@ public AnnotationConfigApplicationContext() {
 
 它会创建一个 reder 和 scanner 用于显示注册或扫描 classpath 下符合条件的bean，将其注册到 bean 容器(BeanFactory 或 ApplicationContext)。
 
-> **AnnotatedBeanDefinitionReader** 用于 annotated bean 的显示注册。即通过掉用 register 方法直接将 bean(一般是 @Configuration 注解的配置类)注册到容器中。
+> **AnnotatedBeanDefinitionReader** 用于 annotated bean 的显示注册。即通过掉用 register 方法直接将 bean(比如 @Configuration 注解的配置类)注册到容器中。
 >  
 > **ClassPathBeanDefinitionScanner** 用于扫描 classpath 下符合条件的 bean，将其注册到 bean 容器。 默认符合条件的 bean 有：  
 > - **Spring 注解的 bean**  
@@ -96,11 +96,14 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
 ```
 
 其过程大致是：  
-1. 根据提供的 bean 创建一个创建一个 AnnotatedGenericBeanDefinition，它继承自 BeanDefinition，并额外提供了 AnnotationMetadata 相关支持。
-2. 通过 conditionEvaluator 判断是否创建 bean。它根据 @Conditional 相关注解管理 bean 创建的先后关系。
-3. 通过 scopeMetadataResolver 确定 bean 作用域。相关注解 @Scope，默认 singleton。 
+1. 将 bean 封装成 AnnotatedGenericBeanDefinition，它继承自 BeanDefinition，并额外提供了 AnnotationMetadata 相关支持。下面的 bean 表示此 beanDefition。
+2. 通过 conditionEvaluator 判断是否注册 bean。它根据 @Conditional 相关注解管理 bean 创建的先后关系。
+3. 调用 scopeMetadataResolver 根据 @Scope 注解确定 bean 作用域，默认为 singleton。 
 4. 确定 beanName，如果指定名字直接返回，否则调用 beanNameGenerator 生成一个 name。
-5. 调用 AnnotationConfigUtils.processCommonDefinitionAnnotations 处理部分通用注解。有 
+5. 调用 AnnotationConfigUtils.processCommonDefinitionAnnotations 处理部分通用注解。比如 @Lazy、@Primary、@DependsOn、@Role、@Description。
+6. 调用 BeanDefinitionCustomizer 处理 bean
+7. 将 bean 封装成 BeanDefinitionHolder，提供 bean 名字、别名信息。下面 bean 表示 definitionHolder。
+8. 调用 BeanDefinitionReaderUtils.registerBeanDefinition 将 bean 注册到 registry，registry 是 BeanDefinitionRegistry 的实现类，它会调用自身的 registerBeanDefinition 方法注册 beanDefinition。
 
 #### 3. refresh
 
