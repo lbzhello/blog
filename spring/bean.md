@@ -107,3 +107,89 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
 
 #### 3. refresh
 
+```java
+public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+        // Prepare this context for refreshing.
+        prepareRefresh();
+
+        // Tell the subclass to refresh the internal bean factory.
+        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+        // Prepare the bean factory for use in this context.
+        prepareBeanFactory(beanFactory);
+
+        try {
+            // Allows post-processing of the bean factory in context subclasses.
+            postProcessBeanFactory(beanFactory);
+
+            // Invoke factory processors registered as beans in the context.
+            invokeBeanFactoryPostProcessors(beanFactory);
+
+            // Register bean processors that intercept bean creation.
+            registerBeanPostProcessors(beanFactory);
+
+            // Initialize message source for this context.
+            initMessageSource();
+
+            // Initialize event multicaster for this context.
+            initApplicationEventMulticaster();
+
+            // Initialize other special beans in specific context subclasses.
+            onRefresh();
+
+            // Check for listener beans and register them.
+            registerListeners();
+
+            // Instantiate all remaining (non-lazy-init) singletons.
+            finishBeanFactoryInitialization(beanFactory);
+
+            // Last step: publish corresponding event.
+            finishRefresh();
+        }
+
+        catch (BeansException ex) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Exception encountered during context initialization - " +
+                        "cancelling refresh attempt: " + ex);
+            }
+
+            // Destroy already created singletons to avoid dangling resources.
+            destroyBeans();
+
+            // Reset 'active' flag.
+            cancelRefresh(ex);
+
+            // Propagate exception to caller.
+            throw ex;
+        }
+
+        finally {
+            // Reset common introspection caches in Spring's core, since we
+            // might not ever need metadata for singleton beans anymore...
+            resetCommonCaches();
+        }
+    }
+}
+```
+
+1. 调用 prepareRefresh() refresh的准备阶段。
+2. 获取 beanFactory，这个 beanFactory 是 AnnotationConfigApplicationContext 调用无参构造方法时，调用父类无参构造方法 GenericApplicationContext() 时创建的 DefaultLisletableBeanFactory，并不是 AnnotationConfigApplicationContext 自身。
+
+```java
+public GenericApplicationContext() {
+    this.beanFactory = new DefaultListableBeanFactory();
+}
+```
+
+3. 调用 prepareBeanFactory(beanFactory)。这个方法配置了 beanFactory 的基本功能，比如设置了 ClassLoader, 注册了一些 BeanPostProcesser, 默认的 environment 等
+4. 调用 postProcessBeanFactory(beanFactory) 模板方法，可以用来定制 bean
+5. 调用 invokeBeanFactoryPostProcessors(beanFactory) 实例化并且调用 BeanFactoryPostProcessor
+6. 调用 registerBeanPostProcessors(beanFactory) 注册 BeanPostProcessor
+7. 调用 initMessageSource() 初始化 message source 
+8. 调用 initApplicationEventMulticaster() 初始化 event multicaster 
+9. 调用 onRefresh() 模板方法。在实例化 singletons 之前定制一些类的行为
+10. registerListeners()
+11. finishBeanFactoryInitialization(beanFactory) 初始化非延迟加载的单例 bean
+12. finishRefresh() 发布相应的事件
+
