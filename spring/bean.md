@@ -39,7 +39,7 @@ public AnnotationConfigApplicationContext() {
 }
 ```
 
-它会创建一个 reder 和 scanner 用于显示注册或扫描 classpath 下符合条件的bean，将其注册到 bean 容器(BeanFactory 或 ApplicationContext)。
+它会创建一个 reder 和 scanner 用于显示注册或扫描 classpath 下符合条件的bean，将其注册到 bean 容器(BeanFactory 或 ApplicationContext)。这两个构造方法都以 this 作为参数，表示将此 AnnotationConfigApplicationContext 作为 registry (注册中心，bean definition 容器) ，AnnotationConfigApplicationContext 实现了 BeanDefinitionRegistry 接口，这个接口可以注册 beanDefinition
 
 > **AnnotatedBeanDefinitionReader** 用于 annotated bean 的显示注册。即通过掉用 register 方法直接将 bean(比如 @Configuration 注解的配置类)注册到容器中。
 >  
@@ -103,7 +103,7 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
 5. 调用 AnnotationConfigUtils.processCommonDefinitionAnnotations 处理部分通用注解。比如 @Lazy、@Primary、@DependsOn、@Role、@Description。
 6. 调用 BeanDefinitionCustomizer 处理 bean
 7. 将 bean 封装成 BeanDefinitionHolder，提供 bean 名字、别名信息。下面 bean 表示 definitionHolder。
-8. 调用 BeanDefinitionReaderUtils.registerBeanDefinition 将 bean 注册到 registry，registry 是 BeanDefinitionRegistry 的实现类，它会调用自身的 registerBeanDefinition 方法注册 beanDefinition。
+8. 调用 BeanDefinitionReaderUtils.registerBeanDefinition 将 bean 注册到 registry，这个 registry 就是上面初始化创建的 AnnotationConfigApplicationContext，它将自身作为参数传给了 AnnotatedBeanDefinitionReader 。它会调用自身的 registerBeanDefinition 方法注册 beanDefinition。
 
 #### 3. refresh
 
