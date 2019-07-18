@@ -1,11 +1,17 @@
 ## Annotation 创建 bean 流程
 
-#### BeanDefinition bean定义接口，
+## 主要接口及其功能
+
+#### ApplicationContext
+
+#### BeanDefinition
+
+ bean定义接口
 1. AnnotatedBeanDefinition 额外提供 AnnotationMetadata 信息
 
-## Bean创建流程
+## Bean 创建流程
 
-#### Java Config 方式 Bean 创建
+#### Java Config 方式
 
 ```java
 ApplicationContext context = new AnnotationConfigApplicationContext(JavaConfig.class);
@@ -24,8 +30,7 @@ public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
     refresh();
 }
 ```
-
-先调用无参构造方法
+#### 1. 调用无参构造方法
 
 ```java
 public AnnotationConfigApplicationContext() {
@@ -49,6 +54,7 @@ public AnnotationConfigApplicationContext() {
 >   - @ManagedBean
 >   - @Named
 
+#### 2. register 
 register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 方法
 
 ```java
@@ -91,3 +97,10 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
 
 其过程大致是：  
 1. 根据提供的 bean 创建一个创建一个 AnnotatedGenericBeanDefinition，它继承自 BeanDefinition，并额外提供了 AnnotationMetadata 相关支持。
+2. 通过 conditionEvaluator 判断是否创建 bean。它根据 @Conditional 相关注解管理 bean 创建的先后关系。
+3. 通过 scopeMetadataResolver 确定 bean 作用域。相关注解 @Scope，默认 singleton。 
+4. 确定 beanName，如果指定名字直接返回，否则调用 beanNameGenerator 生成一个 name。
+5. 调用 AnnotationConfigUtils.processCommonDefinitionAnnotations 处理部分通用注解。有 
+
+#### 3. refresh
+
