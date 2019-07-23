@@ -193,3 +193,7 @@ public GenericApplicationContext() {
 11. finishBeanFactoryInitialization(beanFactory) 初始化非延迟加载的单例 bean
 12. finishRefresh() 发布相应的事件
 
+-----------
+
+1. DefaultBeanDefinitionDocumentReader 解析 Xml Bean 标签定义的 Bean
+processBeanDefinition
