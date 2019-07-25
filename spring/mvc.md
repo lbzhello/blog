@@ -85,7 +85,9 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
 
 ```
 
-它先判断是否已经存在 WebApplicationContext. 如果存在则报错，否则调用 ContextLoader#createWebApplicationContext 创建一个。进入创建过程
+它先判断是否已经存在 WebApplicationContext. 如果存在则报错，否则调用 ContextLoader#createWebApplicationContext 创建一个 WebApplicationContext 并将它放在 ServletContext 上下文中，以 `WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE` 为 key. 因此可以调用 ```servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE)``` 拿到这个 WebApplicationContext, 更简单的方法是通过 SpringMVC 提供的工具类 ```WebApplicationContextUtils.getWebApplicationContext(servletContext)``` 
+
+ContextLoader#createWebApplicationContext 创建 WebApplicationContext
 
 ```java
 protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
@@ -98,7 +100,7 @@ protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
 }
 
 ```
-ContextLoader#determineContextClass
+ContextLoader#determineContextClass 根据 ```ContextLoader.CONTEXT_CLASS_PARAM``` 确定使用哪个 WebApplicationContext 的实现类
 
 ```java
 protected Class<?> determineContextClass(ServletContext servletContext) {
@@ -124,11 +126,17 @@ protected Class<?> determineContextClass(ServletContext servletContext) {
     }
 }
 ```
+```ContextLoader.CONTEXT_CLASS_PARAM``` 即 contextClass 可以通过 ServletContext 初始化参数配置，若未指定使用默认的 XmlWebApplicationContext。
 
-2. 会创建一个 WebApplicationContext 并将它放在 ServletContext 上下文中，以 `WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE` 为 key
+WebApplicationContext 创建完成之后接着设置 parent, 子类可以通过模版方法 loadParentContext(servletContext) 配置 web 上下文的层次结构。
+
+和 Spring 的 ApplicationContext 一样，基于配置文件方式的 WebApplicationContext 也需要一个 bean 的配置文件，执行 refresh 等操作。这些操作由 refresh 完成
+
 ```java
-	String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
 ```
+
+
+
 
 
 参考：
