@@ -135,11 +135,18 @@ WebApplicationContext 创建完成之后接着设置 parent, 子类可以通过�
 ```java
 ```
 
+## java config 
 
+WebApplicationInitializer
+
+![WebApplicationInitializer](/img/spring/mvc/web-application-initializer.png)
 
 
 
 参考：
-1. [servlet监听器Listener介绍和使用][1] 
+1. [servlet监听器Listener介绍和使用][1]  
+2. [UML各种图总结-精华][2]
 
 [1]: https://blog.csdn.net/qq_15204179/article/details/82055448
+
+[2]: https://www.cnblogs.com/jiangds/p/6596595.html
