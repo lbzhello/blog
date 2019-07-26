@@ -41,7 +41,7 @@ public AnnotationConfigApplicationContext() {
 
 它会创建一个 reder 和 scanner 用于显示注册或扫描 classpath 下符合条件的bean，将其注册到 bean 容器(BeanFactory 或 ApplicationContext)。这两个构造方法都以 this 作为参数，表示将此 AnnotationConfigApplicationContext 作为 registry (注册中心，bean definition 容器) ，AnnotationConfigApplicationContext 实现了 BeanDefinitionRegistry 接口，这个接口可以注册 beanDefinition
 
-> **AnnotatedBeanDefinitionReader** 用于 annotated bean 的显示注册。即通过掉用 register 方法直接将 bean(比如 @Configuration 注解的配置类)注册到容器中。
+> **AnnotatedBeanDefinitionReader** 用于 annotated bean 的显示注册。即通过调用 register 方法直接将 bean(比如 @Configuration 注解的配置类)注册到容器中。
 >  
 > **ClassPathBeanDefinitionScanner** 用于扫描 classpath 下符合条件的 bean，将其注册到 bean 容器。 默认符合条件的 bean 有：  
 > - **Spring 注解的 bean**  
@@ -102,8 +102,8 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
 4. 确定 beanName，如果指定名字直接返回，否则调用 beanNameGenerator 生成一个 name。
 5. 调用 AnnotationConfigUtils.processCommonDefinitionAnnotations 处理部分通用注解。比如 @Lazy、@Primary、@DependsOn、@Role、@Description。
 6. 调用 BeanDefinitionCustomizer 处理 bean
-7. 将 bean 封装成 BeanDefinitionHolder，提供 bean 名字、别名信息。下面 bean 表示 definitionHolder。
-8. 调用 BeanDefinitionReaderUtils.registerBeanDefinition 将 bean 注册到 registry，这个 registry 就是上面初始化创建的 AnnotationConfigApplicationContext，它将自身作为参数传给了 AnnotatedBeanDefinitionReader 。它会调用自身的 registerBeanDefinition 方法注册 beanDefinition。
+7. 将 bean 封装成 BeanDefinitionHolder，提供 bean 名字、别名信息。
+8. 调用 BeanDefinitionReaderUtils.registerBeanDefinition 将 bean 注册到 registry，这个 registry 就是上面初始化创建的 AnnotationConfigApplicationContext，它将自身作为参数传给了 AnnotatedBeanDefinitionReader 。它会调用自身的 registerBeanDefinition 方法注册 bean。
 
 #### 3. refresh
 
@@ -174,7 +174,7 @@ public void refresh() throws BeansException, IllegalStateException {
 ```
 
 1. 调用 prepareRefresh() refresh的准备阶段。
-2. 获取 beanFactory，这个 beanFactory 是 AnnotationConfigApplicationContext 调用无参构造方法时，调用父类无参构造方法 GenericApplicationContext() 时创建的 DefaultLisletableBeanFactory，并不是 AnnotationConfigApplicationContext 自身。
+2. 获取 beanFactory，这个 beanFactory 是 AnnotationConfigApplicationContext 调用无参构造方法时，调用父类无参构造方法 GenericApplicationContext() 时创建的 DefaultListableBeanFactory，并不是 AnnotationConfigApplicationContext 自身。
 
 ```java
 public GenericApplicationContext() {

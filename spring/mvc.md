@@ -1,6 +1,6 @@
-## SpringMVC 启动原理
+## SpringMVC 设计原理
 
-配置文件
+## 主要类及其功能
 
 一般我们会在配置文件里面配置一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized. 
 
@@ -85,7 +85,7 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
 
 ```
 
-它先判断是否已经存在 WebApplicationContext. 如果存在则报错，否则调用 ContextLoader#createWebApplicationContext 创建一个 WebApplicationContext 并将它放在 ServletContext 上下文中，以 `WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE` 为 key. 因此可以调用 ```servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE)``` 拿到这个 WebApplicationContext, 更简单的方法是通过 SpringMVC 提供的工具类 ```WebApplicationContextUtils.getWebApplicationContext(servletContext)``` 
+它先判断当前 ServletContext 中是否已经存在 WebApplicationContext. 如果存在则报错，否则调用 ContextLoader#createWebApplicationContext 创建一个 WebApplicationContext 并将它放在 ServletContext 上下文中，以 `WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE` 为 key. 因此可以调用 ```servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE)``` 拿到这个 WebApplicationContext, 更简单的方法是通过 SpringMVC 提供的工具类 ```WebApplicationContextUtils.getWebApplicationContext(servletContext)``` 
 
 ContextLoader#createWebApplicationContext 创建 WebApplicationContext
 
