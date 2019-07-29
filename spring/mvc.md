@@ -1,5 +1,7 @@
 ## SpringMVC 设计原理
 
+
+
 ## 主要类及其功能
 
 一般我们会在配置文件里面配置一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized. 
@@ -11,6 +13,7 @@ public void contextInitialized(ServletContextEvent event) {
     initWebApplicationContext(event.getServletContext());
 }
 ```
+
 ContextLoader#initWebApplicationContext 
 
 ```java
@@ -136,6 +139,28 @@ WebApplicationContext 创建完成之后接着设置 parent, 子类可以通过�
 ```
 
 ## java config 
+
+## Java Config
+
+```java
+public class MyWebAppInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+
+    @Override
+    protected Class<?>[] getRootConfigClasses() {
+        return null;
+    }
+
+    @Override
+    protected Class<?>[] getServletConfigClasses() {
+        return new Class<?>[] { MyWebConfig.class };
+    }
+
+    @Override
+    protected String[] getServletMappings() {
+        return new String[] { "/" };
+    }
+}
+```
 
 WebApplicationInitializer
 
