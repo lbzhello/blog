@@ -49,6 +49,8 @@
 
 <div style="background-color: #F400A1" class="box">品红 #F400A1</div>
 
+<div style="background-color: #FF007F" class="box">玫瑰红 #FF007F</div>
+
 <div style="background-color: #CC0080" class="box">红宝石 #CC0080</div>
 
 <div style="background-color: #A52A2A" class="box">褐色 #A52A2A</div>
