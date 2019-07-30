@@ -89,18 +89,13 @@ SpringMVC 可以通过两种方式创建 WebApplicationContext
 
 一种是通过 ContextLoaderListener, 它创建的 WebApplicationContext 称为 root application context，或者说根容器。一个 ServletContext 中只能有一个根容器，而一个 web application 中只能有一个 ServletContext，因此一个 web 应用程序中只能有一个根容器
 
-另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 就是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。**但是一般情况下没必要这样做**，多个 
+另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。**但是一般情况下没必要这样做**，多个 
 DispatcherServlet 不会降低耦合性，但却增加了复杂性。
 
-如果当前 ServletContext 存在根容器并且它没有父容器，就会把根容器设为它的父容器。
-
-
-
+如果上下文容器的 parent 不为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
 
 ```java
 ```
-
-SpringMVC 有两种方式创建 WebApplicationContext，一种 
 
 一般我们会配置（web.xml 或 java-based）一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized. 
 
