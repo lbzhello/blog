@@ -34,6 +34,55 @@ SpringMVC 会通过 WebApplicationContext 来管理服务器请求中涉及到�
 
 WebApplicationContext 继承自 ApplicationContext, 它定义了一些新的作用域、获取 ServletContext 的接口等信息。
 
+```java
+public interface WebApplicationContext extends ApplicationContext {
+
+	//根容器名，作为 key 存储在 ServletContext 中; ServletContextListener 持有的 WebApplicationContext
+	String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
+
+	/**
+	 * 这三个是 WebApplicationContext 所特有的作用域
+     * 通过 WebApplicationContextUtils.registerWebApplicationScopes 注册相应的处理器
+	 */
+	String SCOPE_REQUEST = "request";
+	String SCOPE_SESSION = "session";
+	String SCOPE_APPLICATION = "application";
+
+	/**
+	 * ServletContext 在 WebApplicationContext 中的名字
+     * 因此除了用 getServletContext() 方法获取到 ServletContext 外
+     * 还可以根据此 key 获取到
+	 */
+	String SERVLET_CONTEXT_BEAN_NAME = "servletContext";
+
+	/**
+	 * Name of the ServletContext init-params environment bean in the factory.
+	 * <p>Note: Possibly merged with ServletConfig parameters.
+	 * ServletConfig parameters override ServletContext parameters of the same name.
+	 * @see javax.servlet.ServletContext#getInitParameterNames()
+	 * @see javax.servlet.ServletContext#getInitParameter(String)
+	 * @see javax.servlet.ServletConfig#getInitParameterNames()
+	 * @see javax.servlet.ServletConfig#getInitParameter(String)
+	 */
+	String CONTEXT_PARAMETERS_BEAN_NAME = "contextParameters";
+
+	/**
+	 * Name of the ServletContext attributes environment bean in the factory.
+	 * @see javax.servlet.ServletContext#getAttributeNames()
+	 * @see javax.servlet.ServletContext#getAttribute(String)
+	 */
+	String CONTEXT_ATTRIBUTES_BEAN_NAME = "contextAttributes";
+
+
+	/**
+	 * Return the standard Servlet API ServletContext for this application.
+	 */
+	@Nullable
+	ServletContext getServletContext();
+
+}
+```
+
 SpringMVC 应用中几乎所有的类都交由 WebApplicationContext 管理，包括业务方面的 @Controller, @Service, @Repository 注解的类， DispatcherServlet ， 文件处理 multipartResolver, 视图解析器 ViewResolver, 处理器映射器 HandleMapping 等。
 
 SpringMVC 可以通过两种方式创建 WebApplicationContext
