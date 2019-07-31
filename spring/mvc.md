@@ -32,6 +32,36 @@ Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Ser
 这个是以前常用的配置方式。Servlet 容器会在启动时加载根路径下 /WEB-INF/web.xml 配置文件。根据其中的配置加载 Servlet, Listener, Filter 等。下面是 SpringMVC 的常见配置：
 
 ```xml
+    <context-param>
+        <!--root web application, 通过 ContextLoaderListener 加载-->
+        <param-name>contextConfigLocation</param-name>
+        <param-value>classpath:applicationContext.xml</param-value>
+    </context-param>
+
+    <context-param>
+        <!--可以不配置，默认为 XmlWebApplicationContext-->
+        <param-name>contextClass</param-name>
+        <!--WebApplicationContext 实现类-->
+        <param-value>org.springframework.web.context.support.XmlWebApplicationContext</param-value>
+    <context-param>
+
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+
+    <servlet>
+        <servlet-name>dispatcher</servlet>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    <init-param>
+        <!--DispatchServlet 持有的 WebApplicationContext-->
+        <param-name>contextConfigLocation</param-name>
+        <param-value>/WEB-INF/applicationContext.xml</param-value>
+    </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>dispatch</servlet-name>
+        <servlet-pattern>/*</servlet-pattern>
+    </servlet-mapping>
 ```
 
 其启动流程大致是这样的,下面会详细分析
@@ -48,13 +78,75 @@ Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Ser
 SpringServletContainerInitalizer
 
 ```java
+@HandlesTypes(WebApplicationInitializer.class)
+public class SpringServletContainerInitializer implements ServletContainerInitializer {
+
+	@Override
+	public void onStartup(@Nullable Set<Class<?>> webAppInitializerClasses, ServletContext servletContext)
+			throws ServletException {
+
+		List<WebApplicationInitializer> initializers = new LinkedList<>();
+
+		if (webAppInitializerClasses != null) {
+			for (Class<?> waiClass : webAppInitializerClasses) {
+				// Be defensive: Some servlet containers provide us with invalid classes,
+				// no matter what @HandlesTypes says...
+				if (!waiClass.isInterface() && !Modifier.isAbstract(waiClass.getModifiers()) &&
+						WebApplicationInitializer.class.isAssignableFrom(waiClass)) {
+					try {
+						initializers.add((WebApplicationInitializer)
+								ReflectionUtils.accessibleConstructor(waiClass).newInstance());
+					}
+					catch (Throwable ex) {
+						throw new ServletException("Failed to instantiate WebApplicationInitializer class", ex);
+					}
+				}
+			}
+		}
+
+		if (initializers.isEmpty()) {
+			servletContext.log("No Spring WebApplicationInitializer types detected on classpath");
+			return;
+		}
+
+		servletContext.log(initializers.size() + " Spring WebApplicationInitializers detected on classpath");
+		AnnotationAwareOrderComparator.sort(initializers);
+		for (WebApplicationInitializer initializer : initializers) {
+			initializer.onStartup(servletContext);
+		}
+	}
+
+}
+
 
 ```
 
-它会探测并加载 ClassPath 下 **WebApplicationContextInitializer** 的实现类，调用它的 onStartUp 方法。比如 SpringMVC 的 java-based 配置方式：
+它会探测并加载 ClassPath 下 **WebApplicationContextInitializer** 的实现类，调用它的 onStartUp 方法。
+
+下面是一个 SpringMVC 的 java-based 配置方式：
 
 ```java
+public class MyWebAppInitializer implements WebApplicationInitializer {
+ 
+    @Override
+    public void onStartup(ServletContext container) {
+        // Create the 'root' Spring application context
+        AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
+        rootContext.register(AppConfig.class);
 
+        // Manage the lifecycle of the root application context
+        container.addListener(new ContextLoaderListener(rootContext));
+
+        // Create the dispatcher servlet's Spring application context
+        AnnotationConfigWebApplicationContext dispatcherContext = new AnnotationConfigWebApplicationContext();
+        dispatcherContext.register(DispatcherConfig.class);
+
+        // Register and map the dispatcher servlet
+        ServletRegistration.Dynamic dispatcher = container.addServlet("dispatcher", new DispatcherServlet(dispatcherContext));
+        dispatcher.setLoadOnStartup(1);
+        dispatcher.addMapping("/");
+    }
+}
 ```
 
 更简单的方法是继承 AbstractAnnotationConfigDispatcherServletInitializer
@@ -83,7 +175,7 @@ public class MyWebAppInitializer extends AbstractAnnotationConfigDispatcherServl
 
 ![spring-mvc-xml]()
 
-## Servlet 和 WebApplicationContext
+## WebApplicationContext
 
 SpringMVC 用 Spring 化的方式来管理 web 请求中的各种对象。
 
@@ -91,7 +183,7 @@ SpringMVC 用 Spring 化的方式来管理 web 请求中的各种对象。
 
 SpringMVC 会通过 WebApplicationContext 来管理服务器请求中涉及到的各种对象和他们之间的依赖关系。我们不需要花费大量的精力去理清各种对象之间的复杂关系，而是以离散的形式专注于单独的功能点。
 
-WebApplicationContext 继承自 ApplicationContext, 它定义了一些新的作用域、获取 ServletContext 的接口等信息。
+WebApplicationContext 继承自 ApplicationContext, 它定义了一些新的作用域，提供了 getServletContext 接口。
 
 ```java
 public interface WebApplicationContext extends ApplicationContext {
@@ -152,9 +244,6 @@ SpringMVC 可以通过两种方式创建 WebApplicationContext
 另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。**但是一般情况下没必要这样做**，多个 DispatcherServlet 不会降低耦合性，但却增加了复杂性。
 
 如果上下文容器的 parent 为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
-
-```java
-```
 
 ## ContextLoaderListener
 
@@ -250,7 +339,9 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
 ContextLoaderListener 有一个参数为 WebApplicationContext 的构造方法，如果创建的时候提供了这个 context 则下面不需要再创建一个 context，这个构造方法在 java config 的方式会用到，下面会说到。
 
 ```java
-
+public ContextLoaderListener(WebApplicationContext context) {
+    super(context);
+}
 ```
 
 **2. context == null**  
@@ -310,7 +401,26 @@ protected Class<?> determineContextClass(ServletContext servletContext) {
 若 contextClass 未指定，则从 defaultStrategies 这个 Properties 中获取，他默认加载 ClassPath 路径下， ContextLoader.properties 文件中配置的类，默认为 XmlWebApplicationContext。
 
 ```java
+private static final String DEFAULT_STRATEGIES_PATH = "ContextLoader.properties";
+
+
+private static final Properties defaultStrategies;
+
+static {
+    // Load default strategy implementations from properties file.
+    // This is currently strictly internal and not meant to be customized
+    // by application developers.
+    try {
+        ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, ContextLoader.class);
+        defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
+    }
+    catch (IOException ex) {
+        throw new IllegalStateException("Could not load 'ContextLoader.properties': " + ex.getMessage());
+    }
+}
 ```
+
+ContextLoader.properties 文件中的类就是 XmlWebApplicationContext。感觉这部分不太重要，了解就行。
 
 确定 class 后，反射实例化一个 WebApplicationContext 的实现类，一个"裸"的根容器创建出来了。
 
@@ -323,12 +433,51 @@ protected Class<?> determineContextClass(ServletContext servletContext) {
 ContextLoader#configureAndRefreshWebApplicationContext
 
 ```java
+protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicationContext wac, ServletContext sc) {
+    if (ObjectUtils.identityToString(wac).equals(wac.getId())) {
+        // The application context id is still set to its original default value
+        // -> assign a more useful id based on available information
+        String idParam = sc.getInitParameter(CONTEXT_ID_PARAM);
+        if (idParam != null) {
+            wac.setId(idParam);
+        }
+        else {
+            // Generate default id...
+            wac.setId(ConfigurableWebApplicationContext.APPLICATION_CONTEXT_ID_PREFIX +
+                    ObjectUtils.getDisplayString(sc.getContextPath()));
+        }
+    }
+
+    //WebApplication 会持有当前 ServletContext
+    wac.setServletContext(sc);
+    //CONFIG_LOCATION_PARAM = "contextConfigLocation", web.xml 里面配置参数 
+    //WebApplicationContext 的 Bean 配置文件
+    String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM);
+    if (configLocationParam != null) {
+        wac.setConfigLocation(configLocationParam);
+    }
+
+    // The wac environment's #initPropertySources will be called in any case when the context
+    // is refreshed; do it eagerly here to ensure servlet property sources are in place for
+    // use in any post-processing or initialization that occurs below prior to #refresh
+    ConfigurableEnvironment env = wac.getEnvironment();
+    if (env instanceof ConfigurableWebEnvironment) {
+        //替换一些配置参数
+        ((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
+    }
+
+    //主要调用 ApplicationContextInitializer 接口，在 refresh 之前初始化一些信息
+    customizeContext(sc, wac);
+
+    //这个比较常见了，注册 BeanDefinition，添加一些 post-processer,
+    //对于 WebApplicationContext, 还会配置一些 Web 相关的东东
+    //比如一些 Web 特有的 Scope 处理器，将 ServletContext 添加到
+    //WebApplicationContext 等
+    wac.refresh();
+}
 ```
 
-和 Spring 的 ApplicationContext 一样，基于配置文件方式的 WebApplicationContext 也需要一个 bean 的配置文件，执行 refresh 等操作。这些操作由 refresh 完成
-
-```java
-```
+对于 WebApplicationContext 他有两个最常用的实现类， 基于 java 配置的 
 
 
 ## java config 
