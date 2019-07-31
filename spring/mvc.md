@@ -10,7 +10,9 @@ Servlet 是一个规范，它只定义了 Servlet 容器在处理服务器请求
 
 Servlet 规范有三个主要的技术点： Servlet, Filter, Listener  
 
-Servlet 是实现 Servlet 接口的程序，Servlet 规范规定它在 Servlet 容器启动时调用 init 方法，每次请求到来时调用 service 方法，Servlet 销毁时调用 destory 方法
+Servlet 是实现 Servlet 接口的程序，Servlet 规范规定它在 Servlet 加载时调用 init 方法，每次请求到来时调用 service 方法，Servlet 销毁时调用 destory 方法
+
+Servlet 可以配置在容器启动时加载或者请求第一次到来时加载，但无论怎样都只会被初始化一次；可以为不同的 URL 配置不同的 Servlet
 
 Lister 是监听某个对象的状态变化的组件，是一种观察者模式。
 
@@ -24,7 +26,64 @@ Filter 过滤器，用来拦截客户请求, 只有通过 Filter 的请求（如
 
 Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Servlet 执行前后（由 chain.doFilter 划分）处理特定的逻辑，如字符编码，日志打印，Session 处理等
 
-## 主要类及其功能
+## Servlet 的配置与 SpringMVC 的实现
+
+#### 通过 web.xml
+这个是以前常用的配置方式。Servlet 容器会在启动时加载根路径下 /WEB-INF/web.xml 配置文件。根据其中的配置加载 Servlet, Listener, Filter 等。下面是 SpringMVC 的常见配置：
+
+```xml
+```
+
+其启动流程大致是这样的,下面会详细分析
+
+![spring-mvc-xml]()
+
+#### 通过 ServletContainerInitializer
+这个是 Servlet 3.0 的规范，新的 code-based 的配置方式。简单来说就是容器会去加载文件JAR包下 META-INF/services/javax.servlet.ServletContainerInitalizer 文件中声明的 ServletContainerInitalizer（SCI） 实现类，并调用他的 onStartup 方法，可以通过 @HandlesTypes 注解将特定的 class 添加到 SCI。
+
+在 spring-web 模块下有个文件 META-INF/services/javax.servlet.ServletContainerInitalizer
+
+![sci]()
+
+SpringServletContainerInitalizer
+
+```java
+
+```
+
+它会探测并加载 ClassPath 下 **WebApplicationContextInitializer** 的实现类，调用它的 onStartUp 方法。比如 SpringMVC 的 java-based 配置方式：
+
+```java
+
+```
+
+更简单的方法是继承 AbstractAnnotationConfigDispatcherServletInitializer
+
+```java
+public class MyWebAppInitializer extends AbstractAnnotationConfigDispatcherServletInitializer {
+
+    @Override
+    protected Class<?>[] getRootConfigClasses() {
+        return null;
+    }
+
+    @Override
+    protected Class<?>[] getServletConfigClasses() {
+        return new Class<?>[] { MyWebConfig.class };
+    }
+
+    @Override
+    protected String[] getServletMappings() {
+        return new String[] { "/" };
+    }
+}
+```
+
+其启动过程如下，下面会详细分析
+
+![spring-mvc-xml]()
+
+## Servlet 和 WebApplicationContext
 
 SpringMVC 用 Spring 化的方式来管理 web 请求中的各种对象。
 
@@ -37,7 +96,7 @@ WebApplicationContext 继承自 ApplicationContext, 它定义了一些新的作�
 ```java
 public interface WebApplicationContext extends ApplicationContext {
 
-	//根容器名，作为 key 存储在 ServletContext 中; ServletContextListener 持有的 WebApplicationContext
+	//根容器名，作为 key 存储在 ServletContext 中; ServletContextListener 创建的 WebApplicationContext
 	String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
 
 	/**
@@ -52,6 +111,7 @@ public interface WebApplicationContext extends ApplicationContext {
 	 * ServletContext 在 WebApplicationContext 中的名字
      * 因此除了用 getServletContext() 方法获取到 ServletContext 外
      * 还可以根据此 key 获取到
+     * 通过 WebApplicationContextUtils.registerEnvironmentBeans 注册到 WebApplicationContext 中
 	 */
 	String SERVLET_CONTEXT_BEAN_NAME = "servletContext";
 
@@ -83,21 +143,24 @@ public interface WebApplicationContext extends ApplicationContext {
 }
 ```
 
-SpringMVC 应用中几乎所有的类都交由 WebApplicationContext 管理，包括业务方面的 @Controller, @Service, @Repository 注解的类， DispatcherServlet ， 文件处理 multipartResolver, 视图解析器 ViewResolver, 处理器映射器 HandleMapping 等。
+SpringMVC 应用中几乎所有的类都交由 WebApplicationContext 管理，包括业务方面的 @Controller, @Service, @Repository 注解的类， ServletContext, 文件处理 multipartResolver, 视图解析器 ViewResolver, 处理器映射器 HandleMapping 等。
 
 SpringMVC 可以通过两种方式创建 WebApplicationContext
 
-一种是通过 ContextLoaderListener, 它创建的 WebApplicationContext 称为 root application context，或者说根容器。一个 ServletContext 中只能有一个根容器，而一个 web application 中只能有一个 ServletContext，因此一个 web 应用程序中只能有一个根容器
+一种是通过 ContextLoaderListener, 它创建的 WebApplicationContext 称为 root application context，或者说根容器。一个 ServletContext 中只能有一个根容器，而一个 web application 中只能有一个 ServletContext，因此一个 web 应用程序中只能有一个根容器，**根容器不是必要的**。
 
-另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。**但是一般情况下没必要这样做**，多个 
-DispatcherServlet 不会降低耦合性，但却增加了复杂性。
+另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。**但是一般情况下没必要这样做**，多个 DispatcherServlet 不会降低耦合性，但却增加了复杂性。
 
-如果上下文容器的 parent 不为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
+如果上下文容器的 parent 为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
 
 ```java
 ```
 
-一般我们会配置（web.xml 或 java-based）一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized. 
+## ContextLoaderListener
+
+一般我们会配置（web.xml 或 java-based）一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 主要用来加载根容器。
+
+根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized. 
 
 相关代码如下：
 ```java
@@ -183,15 +246,29 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
 
 它先判断当前 ServletContext 中是否已经存在 WebApplicationContext. 如果存在则报错，否则判断 context(指 Spring 的 WebApplicationContext) 是否为 null，这里分两种情况：
 
-#### 1. context != null  
-ContextLoaderListener 有一个参数 WebApplicationContext 的构造方法，如果创建的时候提供了这个 context 则下面不需要再创建一个 context，这个构造方法在 java config 的方式会用到，下面会说到
+**1. context != null**  
+ContextLoaderListener 有一个参数为 WebApplicationContext 的构造方法，如果创建的时候提供了这个 context 则下面不需要再创建一个 context，这个构造方法在 java config 的方式会用到，下面会说到。
 
-#### 2. context == null  
+```java
+
+```
+
+**2. context == null**  
 这种情况一般是通过 web.xml 方式配置的 ContextLoaderListener。
 
 若 context == null, 调用 ContextLoader#createWebApplicationContext 创建一个 WebApplicationContext 并将它放在 ServletContext 上下文中，以 `WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE` 为 key. 因此可以调用 ```servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE)``` 拿到这个 WebApplicationContext, 更简单的方法是通过 SpringMVC 提供的工具类 ```WebApplicationContextUtils.getWebApplicationContext(servletContext)``` 
 
-ContextLoader#createWebApplicationContext 创建 WebApplicationContext
+WebApplicationContext 创建完成之后（通过构造参数或者 createWebApplicationContext）接着设置 parent, 子类可以通过模版方法 loadParentContext(servletContext) 配置 web 上下文的层次结构。
+
+调用 configureAndRefreshWebApplicationContext，初始化 WebApplicationContext, 调用他的 refresh 方法，这个方法执行后，WebApplicationContext 就创建好了，下面会详细分析。
+
+将 WebApplicationContext（即根容器）以 ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE 为 key 放进 ServletContext。
+
+最后配置 currentContext。
+
+#### createWebApplicationContext 和 configureAndRefreshWebApplicationContext
+
+ContextLoader#createWebApplicationContext
 
 ```java
 protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
@@ -235,14 +312,24 @@ protected Class<?> determineContextClass(ServletContext servletContext) {
 ```java
 ```
 
-到这里 WebApplicationContext 已经创建完成
+确定 class 后，反射实例化一个 WebApplicationContext 的实现类，一个"裸"的根容器创建出来了。
 
-WebApplicationContext 创建完成之后接着设置 parent, 子类可以通过模版方法 loadParentContext(servletContext) 配置 web 上下文的层次结构。
+想一想，平时为啥创建 ApplicationContext？ 
+
+作为 Bean 容器，当然是用来管理 Bean 了。
+
+既然用来管理 Bean，是不是应该先把 Bean 放进去？ 通过 xml？ 注解？ 或者干脆直接调用 register 方法注册？ 然后是不是应该 refresh 一下？配置一些 post-processer，设置一些参数，提前创建 Singleton？
+
+ContextLoader#configureAndRefreshWebApplicationContext
+
+```java
+```
 
 和 Spring 的 ApplicationContext 一样，基于配置文件方式的 WebApplicationContext 也需要一个 bean 的配置文件，执行 refresh 等操作。这些操作由 refresh 完成
 
 ```java
 ```
+
 
 ## java config 
 
