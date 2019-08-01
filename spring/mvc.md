@@ -33,7 +33,7 @@ Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Ser
 
 ```xml
     <context-param>
-        <!--root web application, 通过 ContextLoaderListener 加载-->
+        <!--root web application context, 通过 ContextLoaderListener 加载-->
         <param-name>contextConfigLocation</param-name>
         <param-value>classpath:applicationContext.xml</param-value>
     </context-param>
@@ -52,11 +52,11 @@ Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Ser
     <servlet>
         <servlet-name>dispatcher</servlet>
         <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
-    <init-param>
-        <!--DispatchServlet 持有的 WebApplicationContext-->
-        <param-name>contextConfigLocation</param-name>
-        <param-value>/WEB-INF/applicationContext.xml</param-value>
-    </init-param>
+        <init-param>
+            <!--DispatchServlet 持有的 WebApplicationContext-->
+            <param-name>contextConfigLocation</param-name>
+            <param-value>/WEB-INF/applicationContext.xml</param-value>
+        </init-param>
     </servlet>
     <servlet-mapping>
         <servlet-name>dispatch</servlet-name>
@@ -232,6 +232,73 @@ public interface WebApplicationContext extends ApplicationContext {
 	@Nullable
 	ServletContext getServletContext();
 
+}
+```
+
+WebApplicationContext 类图
+
+![web](/img/spring/ioc/application-context-1.png)
+
+WebApplicationContext 比较常用的有两个实现类，XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext。 他们有相同的继承结构,提供了不同的功能。
+
+XmlWebApplicationContext 从 xml 文档中获取配置信息。配置文件的位置由 contextConfigLocation 参数决定。
+
+```xml
+    <context-param>
+        <!--root web application context, 通过 ContextLoaderListener 加载-->
+        <param-name>contextConfigLocation</param-name>
+        <param-value>classpath:applicationContext.xml</param-value>
+    </context-param>
+
+    <context-param>
+        <!--可以不配置，默认为 XmlWebApplicationContext-->
+        <param-name>contextClass</param-name>
+        <!--WebApplicationContext 实现类-->
+        <param-value>org.springframework.web.context.support.XmlWebApplicationContext</param-value>
+    <context-param>
+
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+
+    <servlet>
+        <servlet-name>dispatcher</servlet>
+        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+        <init-param>
+            <!--DispatchServlet 持有的 WebApplicationContext-->
+            <param-name>contextConfigLocation</param-name>
+            <param-value>/WEB-INF/applicationContext.xml</param-value>
+        </init-param>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>dispatch</servlet-name>
+        <servlet-pattern>/*</servlet-pattern>
+    </servlet-mapping>
+```
+
+AnnotationConfigWebApplicationContext 和 AnnotationConfigApplicationContext 类似，以 code-based 方式加载 Bean 配置信息，但额外提供了 web 相关的功能。通常会提供一个 @Configuration 注解的配置类作为配置信息。
+
+```java
+public class MyWebAppInitializer implements WebApplicationInitializer {
+ 
+    @Override
+    public void onStartup(ServletContext container) {
+        // Create the 'root' Spring application context
+        AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
+        rootContext.register(AppConfig.class);
+
+        // Manage the lifecycle of the root application context
+        container.addListener(new ContextLoaderListener(rootContext));
+
+        // Create the dispatcher servlet's Spring application context
+        AnnotationConfigWebApplicationContext dispatcherContext = new AnnotationConfigWebApplicationContext();
+        dispatcherContext.register(DispatcherConfig.class);
+
+        // Register and map the dispatcher servlet
+        ServletRegistration.Dynamic dispatcher = container.addServlet("dispatcher", new DispatcherServlet(dispatcherContext));
+        dispatcher.setLoadOnStartup(1);
+        dispatcher.addMapping("/");
+    }
 }
 ```
 
@@ -451,7 +518,7 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
     //WebApplication 会持有当前 ServletContext
     wac.setServletContext(sc);
     //CONFIG_LOCATION_PARAM = "contextConfigLocation", web.xml 里面配置参数 
-    //WebApplicationContext 的 Bean 配置文件
+    //root web application context 的 Bean 配置文件
     String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM);
     if (configLocationParam != null) {
         wac.setConfigLocation(configLocationParam);
