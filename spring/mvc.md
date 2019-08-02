@@ -237,7 +237,7 @@ public interface WebApplicationContext extends ApplicationContext {
 
 WebApplicationContext 类图
 
-![web](/img/spring/ioc/application-context-1.png)
+![web](/img/spring/ioc/application-context.png)
 
 WebApplicationContext 比较常用的有两个实现类，XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext。 他们有相同的继承结构,提供了不同的功能。
 
