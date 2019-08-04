@@ -179,7 +179,7 @@ public class MyWebAppInitializer extends AbstractAnnotationConfigDispatcherServl
 
 SpringMVC 用 Spring 化的方式来管理 web 请求中的各种对象。
 
-什么是 Spring 化？ IOC 和 AOP, 用它的方式，改写一部历史，这不是本文的重点，具体自行查阅。
+什么是 Spring 化？ IOC 和 AOP, 这不是本文的重点，具体自行查阅。
 
 SpringMVC 会通过 WebApplicationContext 来管理服务器请求中涉及到的各种对象和他们之间的依赖关系。我们不需要花费大量的精力去理清各种对象之间的复杂关系，而是以离散的形式专注于单独的功能点。
 
@@ -239,7 +239,11 @@ WebApplicationContext 类图
 
 ![web](/img/spring/ioc/application-context.png)
 
-WebApplicationContext 比较常用的有两个实现类，XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext。 他们有相同的继承结构,提供了不同的功能。
+ApplicationContext 有一个抽象实现类 AbstractApplicationContext, 模板方法的设计模式。它有一个 refresh 方法，它定义了**加载或初始化** bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, file, annotation, web 等，并且可以通过模板方法定制自己的需求。
+
+AbstractApplicationContext 有两个实现体系。
+
+AbstractRefreshableApplicationContext 
 
 XmlWebApplicationContext 从 xml 文档中获取配置信息。配置文件的位置由 contextConfigLocation 参数决定。
 
@@ -533,7 +537,7 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
         ((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
     }
 
-    //主要调用 ApplicationContextInitializer 接口，在 refresh 之前初始化一些信息
+    //主要调用 ApplicationContextInitializer 接口，在 refresh 之前定制一些信息
     customizeContext(sc, wac);
 
     //这个比较常见了，注册 BeanDefinition，添加一些 post-processer,
