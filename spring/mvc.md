@@ -241,70 +241,27 @@ WebApplicationContext 类图
 
 ApplicationContext 有一个抽象实现类 AbstractApplicationContext, 模板方法的设计模式。它有一个 refresh 方法，它定义了**加载或初始化** bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, file, annotation, web 等，并且可以通过模板方法定制自己的需求。
 
-AbstractApplicationContext 有两个实现体系。
+AbstractApplicationContext 有两个实现体系, 他们的区别是每次 refresh 时是否会创建一个新的 DefaultListableBeanFactory。
 
-AbstractRefreshableApplicationContext 
+> DefaultListableBeanFactory 是实际存放 bean 的容器, 提供 bean 注册功能
 
-XmlWebApplicationContext 从 xml 文档中获取配置信息。配置文件的位置由 contextConfigLocation 参数决定。
+AbstractRefreshableApplicationContext 这个 refreshable 并不是指 refresh 这个方法，而是指 refreshBeanFactory 这个方法。他会在每次 refresh 时创建一个新的 BeanFactory（DefaultListableBeanFactory）用于存放 bean，然后调用 loadBeanDefinitions 将 bean 加载到新创建的 BeanFactory。
 
-```xml
-    <context-param>
-        <!--root web application context, 通过 ContextLoaderListener 加载-->
-        <param-name>contextConfigLocation</param-name>
-        <param-value>classpath:applicationContext.xml</param-value>
-    </context-param>
+GenericApplicationContext 内部持有一个 DefaultListableBeanFactory, 所以可以提前将 Bean 加载到 DefaultListableBeanFactory, 它也有 refreshBeanFactory 方法，但是这个方法啥也不做。
 
-    <context-param>
-        <!--可以不配置，默认为 XmlWebApplicationContext-->
-        <param-name>contextClass</param-name>
-        <!--WebApplicationContext 实现类-->
-        <param-value>org.springframework.web.context.support.XmlWebApplicationContext</param-value>
-    <context-param>
+根据读取配置的方式，也可以分成 3 类，**基于 xml 的配置**, **基于 annotation 的配置**和**基于 java-based 的配置**
 
-    <listener>
-        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
-    </listener>
+基于 xml 的配置使用 xml 作为配置方式, 此类的名字都含有 *Xml*, 比如从文件系统路径读取配置的 FilePathXmlApplicationContext, 从 ClassPath 读取配置的 ClassPathXmlApplicationContext, 基于 Web 的 XmlWebApplicationContext 等
 
-    <servlet>
-        <servlet-name>dispatcher</servlet>
-        <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
-        <init-param>
-            <!--DispatchServlet 持有的 WebApplicationContext-->
-            <param-name>contextConfigLocation</param-name>
-            <param-value>/WEB-INF/applicationContext.xml</param-value>
-        </init-param>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>dispatch</servlet-name>
-        <servlet-pattern>/*</servlet-pattern>
-    </servlet-mapping>
-```
+基于注解的配置通过扫描指定包下面具有某个注解的类，将其注册到 bean 容器，相关注解有 @Component, @Service, @Controller, @Repository，@Named 等
 
-AnnotationConfigWebApplicationContext 和 AnnotationConfigApplicationContext 类似，以 code-based 方式加载 Bean 配置信息，但额外提供了 web 相关的功能。通常会提供一个 @Configuration 注解的配置类作为配置信息。
+java-based 的配置方式目前是大势所趋，结合注解的方式使用简单方便易懂，主要依靠 @Configuration 和 @Bean
 
-```java
-public class MyWebAppInitializer implements WebApplicationInitializer {
- 
-    @Override
-    public void onStartup(ServletContext container) {
-        // Create the 'root' Spring application context
-        AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
-        rootContext.register(AppConfig.class);
+上面几个类是基础类，下面是 SpringMVC 相关的 WebApplicationContext
 
-        // Manage the lifecycle of the root application context
-        container.addListener(new ContextLoaderListener(rootContext));
+XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext 继承自 AbstractRefreshableApplicationContext， 表示它们会在 refresh 时新创建一个 DefaultListableBeanFactory， 然后 loadBeanDefinitions。 从名字可以看出它们分别从 xml 和 注解类（通常是 @Configuration 注解的配置类）中获取配置信息。
 
-        // Create the dispatcher servlet's Spring application context
-        AnnotationConfigWebApplicationContext dispatcherContext = new AnnotationConfigWebApplicationContext();
-        dispatcherContext.register(DispatcherConfig.class);
-
-        // Register and map the dispatcher servlet
-        ServletRegistration.Dynamic dispatcher = container.addServlet("dispatcher", new DispatcherServlet(dispatcherContext));
-        dispatcher.setLoadOnStartup(1);
-        dispatcher.addMapping("/");
-    }
-}
-```
+XmlEmbeddedWebApplicationContext 和 AnnotationConfigEmbeddedWebApplicationContext 与上面两个相似，从名字可以看出他们是用于 "Embedded" 方面的，即 SpringBoot 嵌入容器所使用的 WebApplicationContext 
 
 SpringMVC 应用中几乎所有的类都交由 WebApplicationContext 管理，包括业务方面的 @Controller, @Service, @Repository 注解的类， ServletContext, 文件处理 multipartResolver, 视图解析器 ViewResolver, 处理器映射器 HandleMapping 等。
 
@@ -533,22 +490,22 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
     // use in any post-processing or initialization that occurs below prior to #refresh
     ConfigurableEnvironment env = wac.getEnvironment();
     if (env instanceof ConfigurableWebEnvironment) {
-        //替换一些配置参数
+        //初始化属性资源，占位符等，
         ((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
     }
 
     //主要调用 ApplicationContextInitializer 接口，在 refresh 之前定制一些信息
     customizeContext(sc, wac);
 
-    //这个比较常见了，注册 BeanDefinition，添加一些 post-processer,
-    //对于 WebApplicationContext, 还会配置一些 Web 相关的东东
-    //比如一些 Web 特有的 Scope 处理器，将 ServletContext 添加到
-    //WebApplicationContext 等
+    //所有的 ApplicationContext 调用 refresh 之后才可用，此方法位于
+    //AbstractApplication，它统一了 ApplicationContext 初始化的基本
+    //流程，子类（包括 WebApplicationContext 的实现类）通过钩子方法
+    //（模版方法）定制一些自己的需求
     wac.refresh();
 }
 ```
 
-对于 WebApplicationContext 他有两个最常用的实现类， 基于 java 配置的 
+上面提到
 
 
 ## java config 
