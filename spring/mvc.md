@@ -505,8 +505,86 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
 }
 ```
 
-上面提到
+## DispatcherServlet
 
+SpringMVC 将前端的所有请求都交给 DispatcherServlet 处理，他本质上是一个 Servlet，可以通过 web.xml 或者 java config 方式配置。
+
+DispatcherServlet 类图
+
+![dispatcher-servlet](/img/spring/mvc/dispatcher-servlet.png)
+
+SpringMVC 将 DispatcherServlet 也当做一个 bean 来处理，所以对于一些 bean 的操作同样可以作用于 DispatcherServlet。
+
+Servlet 容器会在启动时调用 init 方法。完成一些初始化操作，其调用流程如下：
+
+**HttpServletBean#init -> FrameworkServlet#initServletBean -> FrameworkServlet#initWebApplicationContext** 
+
+前面两个方法比较简单，看 FrameworkServlet#initWebApplicationContext
+
+```java
+/**
+* Initialize and publish the WebApplicationContext for this servlet.
+* <p>Delegates to {@link #createWebApplicationContext} for actual creation
+* of the context. Can be overridden in subclasses.
+* @return the WebApplicationContext instance
+* @see #FrameworkServlet(WebApplicationContext)
+* @see #setContextClass
+* @see #setContextConfigLocation
+*/
+protected WebApplicationContext initWebApplicationContext() {
+    WebApplicationContext rootContext =
+            WebApplicationContextUtils.getWebApplicationContext(getServletContext());
+    WebApplicationContext wac = null;
+
+    if (this.webApplicationContext != null) {
+        // A context instance was injected at construction time -> use it
+        wac = this.webApplicationContext;
+        if (wac instanceof ConfigurableWebApplicationContext) {
+            ConfigurableWebApplicationContext cwac = (ConfigurableWebApplicationContext) wac;
+            if (!cwac.isActive()) {
+                // The context has not yet been refreshed -> provide services such as
+                // setting the parent context, setting the application context id, etc
+                if (cwac.getParent() == null) {
+                    // The context instance was injected without an explicit parent -> set
+                    // the root application context (if any; may be null) as the parent
+                    cwac.setParent(rootContext);
+                }
+                configureAndRefreshWebApplicationContext(cwac);
+            }
+        }
+    }
+    if (wac == null) {
+        // No context instance was injected at construction time -> see if one
+        // has been registered in the servlet context. If one exists, it is assumed
+        // that the parent context (if any) has already been set and that the
+        // user has performed any initialization such as setting the context id
+        wac = findWebApplicationContext();
+    }
+    if (wac == null) {
+        // No context instance is defined for this servlet -> create a local one
+        wac = createWebApplicationContext(rootContext);
+    }
+
+    if (!this.refreshEventReceived) {
+        // Either the context is not a ConfigurableApplicationContext with refresh
+        // support or the context injected at construction time had already been
+        // refreshed -> trigger initial onRefresh manually here.
+        synchronized (this.onRefreshMonitor) {
+            onRefresh(wac);
+        }
+    }
+
+    if (this.publishContext) {
+        // Publish the context as a servlet context attribute.
+        String attrName = getServletContextAttributeName();
+        getServletContext().setAttribute(attrName, wac);
+    }
+
+    return wac;
+}
+```
+
+一些 viewResolver 都是通过 IOC 容器管理的
 
 ## java config 
 
