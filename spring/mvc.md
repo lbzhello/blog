@@ -482,7 +482,8 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
     // use in any post-processing or initialization that occurs below prior to #refresh
     ConfigurableEnvironment env = wac.getEnvironment();
     if (env instanceof ConfigurableWebEnvironment) {
-        //初始化属性资源，占位符等，
+        //初始化属性资源，占位符等
+        //在这里调用确保 servlet 属性资源在 post-processing 和 initialization 阶段是可用的
         ((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
     }
 
@@ -517,14 +518,14 @@ Servlet 容器会在启动时调用 init 方法。完成一些初始化操作，
 
 ```java
 /**
-* Initialize and publish the WebApplicationContext for this servlet.
-* <p>Delegates to {@link #createWebApplicationContext} for actual creation
-* of the context. Can be overridden in subclasses.
-* @return the WebApplicationContext instance
-* @see #FrameworkServlet(WebApplicationContext)
-* @see #setContextClass
-* @see #setContextConfigLocation
-*/
+ * Initialize and publish the WebApplicationContext for this servlet.
+ * <p>Delegates to {@link #createWebApplicationContext} for actual creation
+ * of the context. Can be overridden in subclasses.
+ * @return the WebApplicationContext instance
+ * @see #FrameworkServlet(WebApplicationContext)
+ * @see #setContextClass
+ * @see #setContextConfigLocation
+ */
 protected WebApplicationContext initWebApplicationContext() {
     //获取 root web application context
     WebApplicationContext rootContext =
@@ -588,14 +589,85 @@ protected WebApplicationContext initWebApplicationContext() {
 #### FrameworkServlet#configureAndRefreshWebApplicationContext
 
 ```java
+protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicationContext wac) {
+    if (ObjectUtils.identityToString(wac).equals(wac.getId())) {
+        // The application context id is still set to its original default value
+        // -> assign a more useful id based on available information
+        if (this.contextId != null) {
+            wac.setId(this.contextId);
+        }
+        else {
+            // Generate default id...
+            wac.setId(ConfigurableWebApplicationContext.APPLICATION_CONTEXT_ID_PREFIX +
+                    ObjectUtils.getDisplayString(getServletContext().getContextPath()) + '/' + getServletName());
+        }
+    }
 
+    //配置 Servlet 相关信息
+    wac.setServletContext(getServletContext());
+    wac.setServletConfig(getServletConfig());
+    wac.setNamespace(getNamespace());
+    wac.addApplicationListener(new SourceFilteringListener(wac, new ContextRefreshListener()));
+
+    // The wac environment's #initPropertySources will be called in any case when the context
+    // is refreshed; do it eagerly here to ensure servlet property sources are in place for
+    // use in any post-processing or initialization that occurs below prior to #refresh
+    ConfigurableEnvironment env = wac.getEnvironment();
+    if (env instanceof ConfigurableWebEnvironment) {
+        //初始化属性资源，占位符等
+        //在这里调用确保 servlet 属性资源在 post-processing 和 initialization 阶段是可用的
+        ((ConfigurableWebEnvironment) env).initPropertySources(getServletContext(), getServletConfig());
+    }
+
+    // 空方法，可以在 refresh 之前配置一些信息
+    postProcessWebApplicationContext(wac);
+    // ApplicationContextInitializer 回调接口
+    applyInitializers(wac);
+    //所有的 ApplicationContext 调用 refresh 之后才可用，此方法位于
+    //AbstractApplication，它统一了 ApplicationContext 初始化的基本
+    //流程，子类（包括 WebApplicationContext 的实现类）通过钩子方法
+    //（模版方法）定制一些自己的需求
+    wac.refresh();
+}
 ```
 
 #### DispatcherServlet#onRefresh
 
 ````java
-
+/**
+ * This implementation calls {@link #initStrategies}.
+ */
+@Override
+protected void onRefresh(ApplicationContext context) {
+    //初始化面向不同功能的策略对象
+    initStrategies(context);
+}
 ````
+
+#### DispatcherServlet#initStrategies
+
+```java
+/**
+ * Initialize the strategy objects that this servlet uses.
+ * <p>May be overridden in subclasses in order to initialize further strategy objects.
+ */
+protected void initStrategies(ApplicationContext context) {
+    initMultipartResolver(context);
+    initLocaleResolver(context);
+    initThemeResolver(context);
+    initHandlerMappings(context);
+    initHandlerAdapters(context);
+    initHandlerExceptionResolvers(context);
+    initRequestToViewNameTranslator(context);
+    initViewResolvers(context);
+    initFlashMapManager(context);
+}
+
+```
+
+这些策略方法的执行流程都是一样的，即从当前 context 中查找相应类型、相应名字的 bean，将他设为当前 DispatcherServlet 的成员变量，后面请求处理的时候会用到。
+
+因此可以根据需求，在 DispatcherServlet#onRefresh 之前将需要的策略类注册进 context, 它们会在 onRefresh 之后生效。
 
 ## DispatcherServlet 处理请求
 
@@ -606,7 +678,98 @@ protected WebApplicationContext initWebApplicationContext() {
 #### DispatcherServlet#doDispatch
 
 ```java
+/**
+ * Process the actual dispatching to the handler.
+ * <p>The handler will be obtained by applying the servlet's HandlerMappings in order.
+ * The HandlerAdapter will be obtained by querying the servlet's installed HandlerAdapters
+ * to find the first that supports the handler class.
+ * <p>All HTTP methods are handled by this method. It's up to HandlerAdapters or handlers
+ * themselves to decide which methods are acceptable.
+ * @param request current HTTP request
+ * @param response current HTTP response
+ * @throws Exception in case of any kind of processing failure
+ */
+protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    HttpServletRequest processedRequest = request;
+    HandlerExecutionChain mappedHandler = null;
+    boolean multipartRequestParsed = false;
 
+    WebAsyncManager asyncManager = WebAsyncUtils.getAsyncManager(request);
+
+    try {
+        ModelAndView mv = null;
+        Exception dispatchException = null;
+
+        try {
+            processedRequest = checkMultipart(request);
+            multipartRequestParsed = (processedRequest != request);
+
+            // Determine handler for the current request.
+            mappedHandler = getHandler(processedRequest);
+            if (mappedHandler == null) {
+                noHandlerFound(processedRequest, response);
+                return;
+            }
+
+            // Determine handler adapter for the current request.
+            HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+            // Process last-modified header, if supported by the handler.
+            String method = request.getMethod();
+            boolean isGet = "GET".equals(method);
+            if (isGet || "HEAD".equals(method)) {
+                long lastModified = ha.getLastModified(request, mappedHandler.getHandler());
+                if (new ServletWebRequest(request, response).checkNotModified(lastModified) && isGet) {
+                    return;
+                }
+            }
+
+            if (!mappedHandler.applyPreHandle(processedRequest, response)) {
+                return;
+            }
+
+            // Actually invoke the handler.
+            mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+
+            if (asyncManager.isConcurrentHandlingStarted()) {
+                return;
+            }
+
+            applyDefaultViewName(processedRequest, mv);
+            mappedHandler.applyPostHandle(processedRequest, response, mv);
+        }
+        catch (Exception ex) {
+            dispatchException = ex;
+        }
+        catch (Throwable err) {
+            // As of 4.3, we're processing Errors thrown from handler methods as well,
+            // making them available for @ExceptionHandler methods and other scenarios.
+            dispatchException = new NestedServletException("Handler dispatch failed", err);
+        }
+        processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
+    }
+    catch (Exception ex) {
+        triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
+    }
+    catch (Throwable err) {
+        triggerAfterCompletion(processedRequest, response, mappedHandler,
+                new NestedServletException("Handler processing failed", err));
+    }
+    finally {
+        if (asyncManager.isConcurrentHandlingStarted()) {
+            // Instead of postHandle and afterCompletion
+            if (mappedHandler != null) {
+                mappedHandler.applyAfterConcurrentHandlingStarted(processedRequest, response);
+            }
+        }
+        else {
+            // Clean up any resources used by a multipart request.
+            if (multipartRequestParsed) {
+                cleanupMultipart(processedRequest);
+            }
+        }
+    }
+}
 ```
 
 
