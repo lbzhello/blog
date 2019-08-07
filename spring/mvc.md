@@ -69,11 +69,13 @@ Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Ser
 #### 通过 ServletContainerInitializer
 这个是 Servlet 3.0 的规范，新的 code-based 的配置方式。简单来说就是容器会去加载文件JAR包下 META-INF/services/javax.servlet.ServletContainerInitalizer 文件中声明的 ServletContainerInitalizer（SCI） 实现类，并调用他的 onStartup 方法，可以通过 @HandlesTypes 注解将特定的 class 添加到 SCI。
 
-在 spring-web 模块下有个文件 META-INF/services/javax.servlet.ServletContainerInitalizer
+在 spring-web 模块下有个文件 META-INF/services/javax.servlet.ServletContainerInitializer,  其内容为
 
-![sci]()
+```java
+org.springframework.web.SpringServletContainerInitializer
+```
 
-SpringServletContainerInitalizer
+SpringServletContainerInitializer
 
 ```java
 @HandlesTypes(WebApplicationInitializer.class)
@@ -149,7 +151,7 @@ public class MyWebAppInitializer implements WebApplicationInitializer {
 
 可见，它和上面 [web.xml](#web-xml) 配置方式基本一致，也配置了 ContextLoaderListener 和 DispatcherServlet 以及其持有的 application context，不过通过代码实现，逻辑更加清晰。
 
-如果每次都需要创建 ContextLoaderListener 和 DispatcherServlet，显然不符合 KISS 原则（keep it simple and stupid）。
+如果每次都需要创建 ContextLoaderListener 和 DispatcherServlet，显然很麻烦，不符合 KISS 原则（keep it simple and stupid）。
 
 SpringMVC 为 WebApplicationInitializer 提供了基本的抽象实现类
 
@@ -206,14 +208,14 @@ public interface WebApplicationContext extends ApplicationContext {
 	/**
 	 * ServletContext 在 WebApplicationContext 中的名字
      * 因此除了用 getServletContext() 方法获取到 ServletContext 外
-     * 还可以根据此 key 获取到
+     * 还可以通过此 key 获取到
      * 通过 WebApplicationContextUtils.registerEnvironmentBeans 注册到 WebApplicationContext 中
 	 */
 	String SERVLET_CONTEXT_BEAN_NAME = "servletContext";
 
 	/**
-	  * ServletContext 和 ServletConfig 配置参数在 context 中的名字
-	  * ServletConfig 的参数具有更高的优先级
+	  * ServletContext 和 ServletConfig 配置参数在 WebApplicationContext 中的名字
+	  * ServletConfig 的参数具有更高的优先级，会覆盖掉 ServletContext 中的参数
       * 值为 Map<String, String> 结构
 	  */
 	String CONTEXT_PARAMETERS_BEAN_NAME = "contextParameters";
@@ -270,7 +272,48 @@ refresh 流程
 #### AbstractApplicationContext#refresh
 
 ```java
+@Override
+public void refresh() throws BeansException, IllegalStateException {
+    synchronized (this.startupShutdownMonitor) {
+        prepareRefresh();
 
+        // XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext 会在这里执行 refreshBeanFactory
+        // 创建一个新的 DefaultListableBeanFactory 然后从 xml 或 java-config 配置中 loadBeanDefinitions
+        ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+        prepareBeanFactory(beanFactory);
+
+        try {
+            // 在这里会配置一些 web 相关的东西，注册 web 相关的 scope
+            postProcessBeanFactory(beanFactory);
+
+            //下面步骤和初始化其他 ApplicationContext 基本一致，忽略
+            invokeBeanFactoryPostProcessors(beanFactory);
+            registerBeanPostProcessors(beanFactory);
+            initMessageSource();
+            initApplicationEventMulticaster();
+            onRefresh();
+            registerListeners();
+            finishBeanFactoryInitialization(beanFactory);
+            finishRefresh();
+        }
+
+        catch (BeansException ex) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Exception encountered during context initialization - " +
+                        "cancelling refresh attempt: " + ex);
+            }
+
+            destroyBeans();
+            cancelRefresh(ex);
+            throw ex;
+        }
+
+        finally {
+            resetCommonCaches();
+        }
+    }
+}
 ```
 
 AbstractRefreshableApplicationContext 重写了 postProcessBeanFactory 方法
@@ -278,8 +321,23 @@ AbstractRefreshableApplicationContext 重写了 postProcessBeanFactory 方法
 #### AbstractRefreshableApplicationContext#postProcessBeanFactory
 
 ```java
+@Override
+protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
+    // servlet-context aware 后处理器
+    beanFactory.addBeanPostProcessor(new ServletContextAwareProcessor(this.servletContext, this.servletConfig));
+    beanFactory.ignoreDependencyInterface(ServletContextAware.class);
+    beanFactory.ignoreDependencyInterface(ServletConfigAware.class);
 
+    // 注册 scope： request, session, application; 
+    // bean 依赖: ServletRequest, ServletResponse, HttpSession, WebRequest, beanFactory
+    WebApplicationContextUtils.registerWebApplicationScopes(beanFactory, this.servletContext);
+
+    //注册 servletContext, servletConfig, contextParameters, contextAttributes
+    WebApplicationContextUtils.registerEnvironmentBeans(beanFactory, this.servletContext, this.servletConfig);
+}
 ```
+
+这些方法都比较简单，不再展开
 
 SpringMVC 通过两种方式创建 WebApplicationContext
 
@@ -681,18 +739,6 @@ protected void initStrategies(ApplicationContext context) {
 
 因此可以根据需求，在 DispatcherServlet#onRefresh 之前将需要的策略类注册进 context, 它们会在 onRefresh 之后生效。
 
-#### WebApplicationContext#refresh
-
-所有的 ApplicationContext 的 refresh 流程都由 AbstractApplicationContext 控制
-
-AbstractApplicationContext#refresh
-
-```java
-
-```
-
-SpringMVC 用到的 XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext 都来自 refresh 体系，所有
-
 ## DispatcherServlet 处理请求
 
 根据 Servlet 规范和 SpringMVC 实现，其处理流程大致如下
@@ -798,7 +844,46 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 #### DispatcherServlet#processDispatchResult
 
 ```java
+private void processDispatchResult(HttpServletRequest request, HttpServletResponse response,
+        @Nullable HandlerExecutionChain mappedHandler, @Nullable ModelAndView mv,
+        @Nullable Exception exception) throws Exception {
 
+    boolean errorView = false;
+
+    if (exception != null) {
+        if (exception instanceof ModelAndViewDefiningException) {
+            logger.debug("ModelAndViewDefiningException encountered", exception);
+            mv = ((ModelAndViewDefiningException) exception).getModelAndView();
+        }
+        else {
+            Object handler = (mappedHandler != null ? mappedHandler.getHandler() : null);
+            mv = processHandlerException(request, response, handler, exception);
+            errorView = (mv != null);
+        }
+    }
+
+    // Did the handler return a view to render?
+    if (mv != null && !mv.wasCleared()) {
+        render(mv, request, response);
+        if (errorView) {
+            WebUtils.clearErrorRequestAttributes(request);
+        }
+    }
+    else {
+        if (logger.isTraceEnabled()) {
+            logger.trace("No view rendering, null ModelAndView returned.");
+        }
+    }
+
+    if (WebAsyncUtils.getAsyncManager(request).isConcurrentHandlingStarted()) {
+        // Concurrent handling started during a forward
+        return;
+    }
+
+    if (mappedHandler != null) {
+        mappedHandler.triggerAfterCompletion(request, response, null);
+    }
+}
 ```
 
 视图渲染
@@ -806,7 +891,48 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 #### DispatcherServlet#render
 
 ```java
+protected void render(ModelAndView mv, HttpServletRequest request, HttpServletResponse response) throws Exception {
+    // Determine locale for request and apply it to the response.
+    Locale locale =
+            (this.localeResolver != null ? this.localeResolver.resolveLocale(request) : request.getLocale());
+    response.setLocale(locale);
 
+    View view;
+    String viewName = mv.getViewName();
+    if (viewName != null) {
+        // We need to resolve the view name.
+        view = resolveViewName(viewName, mv.getModelInternal(), locale, request);
+        if (view == null) {
+            throw new ServletException("Could not resolve view with name '" + mv.getViewName() +
+                    "' in servlet with name '" + getServletName() + "'");
+        }
+    }
+    else {
+        // No need to lookup: the ModelAndView object contains the actual View object.
+        view = mv.getView();
+        if (view == null) {
+            throw new ServletException("ModelAndView [" + mv + "] neither contains a view name nor a " +
+                    "View object in servlet with name '" + getServletName() + "'");
+        }
+    }
+
+    // Delegate to the View object for rendering.
+    if (logger.isTraceEnabled()) {
+        logger.trace("Rendering view [" + view + "] ");
+    }
+    try {
+        if (mv.getStatus() != null) {
+            response.setStatus(mv.getStatus().value());
+        }
+        view.render(mv.getModelInternal(), request, response);
+    }
+    catch (Exception ex) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Error rendering view [" + view + "]", ex);
+        }
+        throw ex;
+    }
+}
 ```
 
 参考：
