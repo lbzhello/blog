@@ -212,21 +212,17 @@ public interface WebApplicationContext extends ApplicationContext {
 	String SERVLET_CONTEXT_BEAN_NAME = "servletContext";
 
 	/**
-	 * Name of the ServletContext init-params environment bean in the factory.
-	 * <p>Note: Possibly merged with ServletConfig parameters.
-	 * ServletConfig parameters override ServletContext parameters of the same name.
-	 * @see javax.servlet.ServletContext#getInitParameterNames()
-	 * @see javax.servlet.ServletContext#getInitParameter(String)
-	 * @see javax.servlet.ServletConfig#getInitParameterNames()
-	 * @see javax.servlet.ServletConfig#getInitParameter(String)
-	 */
+	  * ServletContext 和 ServletConfig 配置参数在 context 中的名字
+	  * ServletConfig 的参数具有更高的优先级
+      * 值为 Map<String, String> 结构
+	  */
 	String CONTEXT_PARAMETERS_BEAN_NAME = "contextParameters";
 
 	/**
-	 * Name of the ServletContext attributes environment bean in the factory.
-	 * @see javax.servlet.ServletContext#getAttributeNames()
-	 * @see javax.servlet.ServletContext#getAttribute(String)
-	 */
+	  * ServletContext 属性信息在 WebApplicationContext 中的名字
+	  * 值为 Map<String, String> 结构
+      * 属性是用来 ServletContext 本身的一些信息的
+	  */
 	String CONTEXT_ATTRIBUTES_BEAN_NAME = "contextAttributes";
 
 
@@ -239,7 +235,7 @@ public interface WebApplicationContext extends ApplicationContext {
 }
 ```
 
-WebApplicationContext 类图
+#### WebApplicationContext 类图
 
 ![web](/img/spring/ioc/application-context.png)
 
@@ -268,6 +264,22 @@ XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext 继承自 Abs
 XmlEmbeddedWebApplicationContext 和 AnnotationConfigEmbeddedWebApplicationContext 与上面两个相似，从名字可以看出他们是用于 "Embedded" 方面的，即 SpringBoot 嵌入容器所使用的 WebApplicationContext 
 
 SpringMVC 应用中几乎所有的类都交由 WebApplicationContext 管理，包括业务方面的 @Controller, @Service, @Repository 注解的类， ServletContext, 文件处理 multipartResolver, 视图解析器 ViewResolver, 处理器映射器 HandleMapping 等。
+
+refresh 流程
+
+#### AbstractApplicationContext#refresh
+
+```java
+
+```
+
+AbstractRefreshableApplicationContext 重写了 postProcessBeanFactory 方法
+
+#### AbstractRefreshableApplicationContext#postProcessBeanFactory
+
+```java
+
+```
 
 SpringMVC 通过两种方式创建 WebApplicationContext
 
@@ -669,6 +681,18 @@ protected void initStrategies(ApplicationContext context) {
 
 因此可以根据需求，在 DispatcherServlet#onRefresh 之前将需要的策略类注册进 context, 它们会在 onRefresh 之后生效。
 
+#### WebApplicationContext#refresh
+
+所有的 ApplicationContext 的 refresh 流程都由 AbstractApplicationContext 控制
+
+AbstractApplicationContext#refresh
+
+```java
+
+```
+
+SpringMVC 用到的 XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext 都来自 refresh 体系，所有
+
 ## DispatcherServlet 处理请求
 
 根据 Servlet 规范和 SpringMVC 实现，其处理流程大致如下
@@ -678,17 +702,6 @@ protected void initStrategies(ApplicationContext context) {
 #### DispatcherServlet#doDispatch
 
 ```java
-/**
- * Process the actual dispatching to the handler.
- * <p>The handler will be obtained by applying the servlet's HandlerMappings in order.
- * The HandlerAdapter will be obtained by querying the servlet's installed HandlerAdapters
- * to find the first that supports the handler class.
- * <p>All HTTP methods are handled by this method. It's up to HandlerAdapters or handlers
- * themselves to decide which methods are acceptable.
- * @param request current HTTP request
- * @param response current HTTP response
- * @throws Exception in case of any kind of processing failure
- */
 protected void doDispatch(HttpServletRequest request, HttpServletResponse response) throws Exception {
     HttpServletRequest processedRequest = request;
     HandlerExecutionChain mappedHandler = null;
@@ -701,17 +714,19 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
         Exception dispatchException = null;
 
         try {
+            //检查是否为文件上传请求
             processedRequest = checkMultipart(request);
             multipartRequestParsed = (processedRequest != request);
 
-            // Determine handler for the current request.
+            // 通过 handlerMapping 查到请求对应的 handler
+            // 返回 HandlerExecutionChain 里面包含 handler 和 interceptors
             mappedHandler = getHandler(processedRequest);
             if (mappedHandler == null) {
                 noHandlerFound(processedRequest, response);
                 return;
             }
 
-            // Determine handler adapter for the current request.
+            // 查找请求对应的 handler adapter
             HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
             // Process last-modified header, if supported by the handler.
@@ -724,18 +739,22 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
                 }
             }
 
+            // 拦截器前置处理，调用 HandlerInterceptor#preHandle
             if (!mappedHandler.applyPreHandle(processedRequest, response)) {
                 return;
             }
 
-            // Actually invoke the handler.
+            // 调用 handler, 就是 @Controller 注解的类
             mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
             if (asyncManager.isConcurrentHandlingStarted()) {
                 return;
             }
 
+            // 设置 viewName, 后面会根据 viewName 找到对应的 view
             applyDefaultViewName(processedRequest, mv);
+
+            // 拦截器后置处理，调用 HandlerInterceptor#postHandle
             mappedHandler.applyPostHandle(processedRequest, response, mv);
         }
         catch (Exception ex) {
@@ -746,9 +765,13 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
             // making them available for @ExceptionHandler methods and other scenarios.
             dispatchException = new NestedServletException("Handler dispatch failed", err);
         }
+
+        // 结果处理，错误，视图等
         processDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);
     }
     catch (Exception ex) {
+        // 拦截器结束处理, 调用 HandlerInterceptor#afterCompletion
+        // 即使发生错误也会执行
         triggerAfterCompletion(processedRequest, response, mappedHandler, ex);
     }
     catch (Throwable err) {
@@ -772,7 +795,19 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 }
 ```
 
+#### DispatcherServlet#processDispatchResult
 
+```java
+
+```
+
+视图渲染
+
+#### DispatcherServlet#render
+
+```java
+
+```
 
 参考：
 1. [servlet监听器Listener介绍和使用][1]  
