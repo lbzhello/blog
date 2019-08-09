@@ -717,10 +717,6 @@ protected void onRefresh(ApplicationContext context) {
 #### DispatcherServlet#initStrategies
 
 ```java
-/**
- * Initialize the strategy objects that this servlet uses.
- * <p>May be overridden in subclasses in order to initialize further strategy objects.
- */
 protected void initStrategies(ApplicationContext context) {
     initMultipartResolver(context);
     initLocaleResolver(context);
@@ -791,6 +787,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
             }
 
             // 调用 handler, 就是 @Controller 注解的类
+            // 如果是一个 rest 请求，mv 为 null，后面不会再调用 render 方法
             mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
             if (asyncManager.isConcurrentHandlingStarted()) {
@@ -841,52 +838,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
 }
 ```
 
-#### DispatcherServlet#processDispatchResult
-
-```java
-private void processDispatchResult(HttpServletRequest request, HttpServletResponse response,
-        @Nullable HandlerExecutionChain mappedHandler, @Nullable ModelAndView mv,
-        @Nullable Exception exception) throws Exception {
-
-    boolean errorView = false;
-
-    if (exception != null) {
-        if (exception instanceof ModelAndViewDefiningException) {
-            logger.debug("ModelAndViewDefiningException encountered", exception);
-            mv = ((ModelAndViewDefiningException) exception).getModelAndView();
-        }
-        else {
-            Object handler = (mappedHandler != null ? mappedHandler.getHandler() : null);
-            mv = processHandlerException(request, response, handler, exception);
-            errorView = (mv != null);
-        }
-    }
-
-    // Did the handler return a view to render?
-    if (mv != null && !mv.wasCleared()) {
-        render(mv, request, response);
-        if (errorView) {
-            WebUtils.clearErrorRequestAttributes(request);
-        }
-    }
-    else {
-        if (logger.isTraceEnabled()) {
-            logger.trace("No view rendering, null ModelAndView returned.");
-        }
-    }
-
-    if (WebAsyncUtils.getAsyncManager(request).isConcurrentHandlingStarted()) {
-        // Concurrent handling started during a forward
-        return;
-    }
-
-    if (mappedHandler != null) {
-        mappedHandler.triggerAfterCompletion(request, response, null);
-    }
-}
-```
-
-视图渲染
+processDispatchResult 会进行异常处理（如果存在的话），然后调用 render 方法渲染视图
 
 #### DispatcherServlet#render
 
@@ -898,9 +850,11 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
     response.setLocale(locale);
 
     View view;
+    // 这个是 @Controller 返回的名字 
     String viewName = mv.getViewName();
     if (viewName != null) {
-        // We need to resolve the view name.
+        // 掉用 viewResolver 解析视图，返回一个视图对象
+        // 会遍历 viewResolvers 找到第一个匹配的处理返回
         view = resolveViewName(viewName, mv.getModelInternal(), locale, request);
         if (view == null) {
             throw new ServletException("Could not resolve view with name '" + mv.getViewName() +
@@ -908,7 +862,7 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
         }
     }
     else {
-        // No need to lookup: the ModelAndView object contains the actual View object.
+        // 已经有视图对象
         view = mv.getView();
         if (view == null) {
             throw new ServletException("ModelAndView [" + mv + "] neither contains a view name nor a " +
@@ -924,6 +878,8 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
         if (mv.getStatus() != null) {
             response.setStatus(mv.getStatus().value());
         }
+
+        // 渲染，不同的 viewResolver 会有不同的逻辑实现
         view.render(mv.getModelInternal(), request, response);
     }
     catch (Exception ex) {
