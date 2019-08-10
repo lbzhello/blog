@@ -243,21 +243,19 @@ public interface WebApplicationContext extends ApplicationContext {
 
 ApplicationContext 有一个抽象实现类 AbstractApplicationContext, 模板方法的设计模式。它有一个 refresh 方法，它定义了**加载或初始化** bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, file, annotation, web 等，并且可以通过模板方法定制自己的需求。
 
-AbstractApplicationContext 有两个实现体系, 他们的区别是每次 refresh 时是否会创建一个新的 DefaultListableBeanFactory。
+AbstractApplicationContext 有两个实现体系, 他们的区别是每次 refresh 时是否会创建一个新的 DefaultListableBeanFactory。DefaultListableBeanFactory 是实际存放 bean 的容器, 提供 bean 注册功能。
 
-> DefaultListableBeanFactory 是实际存放 bean 的容器, 提供 bean 注册功能
+1. **AbstractRefreshableApplicationContext** 这个 refreshable 并不是指 refresh 这个方法，而是指 refreshBeanFactory 这个方法。他会在每次 refresh 时创建一个新的 BeanFactory（DefaultListableBeanFactory）用于存放 bean，然后调用 loadBeanDefinitions 将 bean 加载到新创建的 BeanFactory。
 
-AbstractRefreshableApplicationContext 这个 refreshable 并不是指 refresh 这个方法，而是指 refreshBeanFactory 这个方法。他会在每次 refresh 时创建一个新的 BeanFactory（DefaultListableBeanFactory）用于存放 bean，然后调用 loadBeanDefinitions 将 bean 加载到新创建的 BeanFactory。
-
-GenericApplicationContext 内部持有一个 DefaultListableBeanFactory, 所以可以提前将 Bean 加载到 DefaultListableBeanFactory, 它也有 refreshBeanFactory 方法，但是这个方法啥也不做。
+2. **GenericApplicationContext** 内部持有一个 DefaultListableBeanFactory, 所以可以提前将 Bean 加载到 DefaultListableBeanFactory, 它也有 refreshBeanFactory 方法，但是这个方法啥也不做。
 
 根据读取配置的方式，也可以分成 3 类，**基于 xml 的配置**, **基于 annotation 的配置**和**基于 java-based 的配置**
 
-基于 xml 的配置使用 xml 作为配置方式, 此类的名字都含有 *Xml*, 比如从文件系统路径读取配置的 FilePathXmlApplicationContext, 从 ClassPath 读取配置的 ClassPathXmlApplicationContext, 基于 Web 的 XmlWebApplicationContext 等
+1. 基于 xml 的配置使用 xml 作为配置方式, 此类的名字都含有 *Xml*, 比如从文件系统路径读取配置的 FilePathXmlApplicationContext, 从 ClassPath 读取配置的 ClassPathXmlApplicationContext, 基于 Web 的 XmlWebApplicationContext 等
 
-基于注解的配置通过扫描指定包下面具有某个注解的类，将其注册到 bean 容器，相关注解有 @Component, @Service, @Controller, @Repository，@Named 等
+2. 基于注解的配置通过扫描指定包下面具有某个注解的类，将其注册到 bean 容器，相关注解有 @Component, @Service, @Controller, @Repository，@Named 等
 
-java-based 的配置方式目前是大势所趋，结合注解的方式使用简单方便易懂，主要是 @Configuration 和 @Bean
+3. java-based 的配置方式目前是大势所趋，结合注解的方式使用简单方便易懂，主要是 @Configuration 和 @Bean
 
 上面几个类是基础类，下面是 SpringMVC 相关的 WebApplicationContext
 
@@ -392,7 +390,7 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
     long startTime = System.currentTimeMillis();
 
     try {
-        // context 可以通过构造方法传入(这个 java config 方式会用到)
+        // context 可以通过构造方法传入(这个在 java config 方式会用到)
         if (this.context == null) {
             //若 web application 为空，创建一个, 这个一般是 web.xml 方式配置的
             this.context = createWebApplicationContext(servletContext);
@@ -414,8 +412,8 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
             }
         }
 
-        //将 context 设为 servlet context 参数
-        //因此可以调用 servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) 拿到这个 WebApplicationContext
+        // 将 context 设为 servlet context 参数
+        // 因此可以调用 servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) 拿到这个 WebApplicationContext
         // 更简单的方法是通过 SpringMVC 提供的工具类 WebApplicationContextUtils.getWebApplicationContext(servletContext)
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);
 
@@ -488,6 +486,7 @@ protected Class<?> determineContextClass(ServletContext servletContext) {
     }
 }
 ```
+
 若 contextClass 未指定，则从 defaultStrategies 这个 Properties 中获取，他默认加载 ClassPath 路径下， ContextLoader.properties 文件中配置的类，默认为 XmlWebApplicationContext。
 
 ```java
@@ -538,10 +537,10 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
         }
     }
 
-    //WebApplication 会持有当前 ServletContext
+    // WebApplication 会持有当前 ServletContext
     wac.setServletContext(sc);
-    //CONFIG_LOCATION_PARAM = "contextConfigLocation", web.xml 里面配置参数 
-    //root web application context 的 Bean 配置文件
+    // CONFIG_LOCATION_PARAM = "contextConfigLocation", web.xml 里面配置参数 
+    // root web application context 的 Bean 配置文件
     String configLocationParam = sc.getInitParameter(CONFIG_LOCATION_PARAM);
     if (configLocationParam != null) {
         wac.setConfigLocation(configLocationParam);
@@ -552,18 +551,19 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
     // use in any post-processing or initialization that occurs below prior to #refresh
     ConfigurableEnvironment env = wac.getEnvironment();
     if (env instanceof ConfigurableWebEnvironment) {
-        //初始化属性资源，占位符等
-        //在这里调用确保 servlet 属性资源在 post-processing 和 initialization 阶段是可用的
+        // 初始化属性资源，占位符等
+        // 在这里调用确保 servlet 属性资源在 post-processing 和 initialization 阶段是可用的
         ((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
     }
 
-    //主要调用 ApplicationContextInitializer 接口，在 refresh 之前定制一些信息
+    // 主要调用 ApplicationContextInitializer 接口，在 refresh 之前定制一些信息
     customizeContext(sc, wac);
 
-    //所有的 ApplicationContext 调用 refresh 之后才可用，此方法位于
-    //AbstractApplication，它统一了 ApplicationContext 初始化的基本
-    //流程，子类（包括 WebApplicationContext 的实现类）通过钩子方法
+    // 所有的 ApplicationContext 调用 refresh 之后才可用，此方法位于
+    // AbstractApplication，它统一了 ApplicationContext 初始化的基本
+    // 流程，子类（包括 WebApplicationContext 的实现类）通过钩子方法
     //（模版方法）定制一些自己的需求
+    // web refresh 流程上面以已经说过
     wac.refresh();
 }
 ```
@@ -597,13 +597,13 @@ Servlet 容器会在启动时调用 init 方法。完成一些初始化操作，
  * @see #setContextConfigLocation
  */
 protected WebApplicationContext initWebApplicationContext() {
-    //获取 root web application context
+    // 获取 root web application context
     WebApplicationContext rootContext =
             WebApplicationContextUtils.getWebApplicationContext(getServletContext());
-    //上下文容器，当前 DispatcherServlet 持有的 WebApplicationContext
+    // 上下文容器，当前 DispatcherServlet 持有的 WebApplicationContext
     WebApplicationContext wac = null;
 
-    //web application 可以通过构造方法传入， java-config 方式会用到
+    // web application 可以通过构造方法传入， java-config 方式会用到
     if (this.webApplicationContext != null) {
         wac = this.webApplicationContext;
         if (wac instanceof ConfigurableWebApplicationContext) {
@@ -617,7 +617,7 @@ protected WebApplicationContext initWebApplicationContext() {
                     cwac.setParent(rootContext);
                 }
 
-                //配置刷新 web application context, 下面会说到
+                // 配置刷新 web application context, 下面会说到
                 configureAndRefreshWebApplicationContext(cwac);
             }
         }
@@ -673,7 +673,7 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
         }
     }
 
-    //配置 Servlet 相关信息
+    // 配置 Servlet 相关信息
     wac.setServletContext(getServletContext());
     wac.setServletConfig(getServletConfig());
     wac.setNamespace(getNamespace());
@@ -684,8 +684,8 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
     // use in any post-processing or initialization that occurs below prior to #refresh
     ConfigurableEnvironment env = wac.getEnvironment();
     if (env instanceof ConfigurableWebEnvironment) {
-        //初始化属性资源，占位符等
-        //在这里调用确保 servlet 属性资源在 post-processing 和 initialization 阶段是可用的
+        // 初始化属性资源，占位符等
+        // 在这里调用确保 servlet 属性资源在 post-processing 和 initialization 阶段是可用的
         ((ConfigurableWebEnvironment) env).initPropertySources(getServletContext(), getServletConfig());
     }
 
@@ -693,10 +693,11 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
     postProcessWebApplicationContext(wac);
     // ApplicationContextInitializer 回调接口
     applyInitializers(wac);
-    //所有的 ApplicationContext 调用 refresh 之后才可用，此方法位于
-    //AbstractApplication，它统一了 ApplicationContext 初始化的基本
-    //流程，子类（包括 WebApplicationContext 的实现类）通过钩子方法
+    // 所有的 ApplicationContext 调用 refresh 之后才可用，此方法位于
+    // AbstractApplication，它统一了 ApplicationContext 初始化的基本
+    // 流程，子类（包括 WebApplicationContext 的实现类）通过钩子方法
     //（模版方法）定制一些自己的需求
+    // web refresh 流程上面以已经说过
     wac.refresh();
 }
 ```
@@ -709,7 +710,7 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
  */
 @Override
 protected void onRefresh(ApplicationContext context) {
-    //初始化面向不同功能的策略对象
+    // 初始化面向不同功能的策略对象
     initStrategies(context);
 }
 ````
@@ -756,7 +757,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
         Exception dispatchException = null;
 
         try {
-            //检查是否为文件上传请求
+            // 检查是否为文件上传请求
             processedRequest = checkMultipart(request);
             multipartRequestParsed = (processedRequest != request);
 
@@ -854,7 +855,7 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
     String viewName = mv.getViewName();
     if (viewName != null) {
         // 掉用 viewResolver 解析视图，返回一个视图对象
-        // 会遍历 viewResolvers 找到第一个匹配的处理返回
+        // 会遍历 viewResolvers 找到第一个匹配的处理, 返回
         view = resolveViewName(viewName, mv.getModelInternal(), locale, request);
         if (view == null) {
             throw new ServletException("Could not resolve view with name '" + mv.getViewName() +
