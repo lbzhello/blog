@@ -1,38 +1,90 @@
 ## SpringMVC 设计原理
 
-
-
 ## Servlet 规范
 
 SpringMVC 是基于 Servlet 的。
 
-Servlet 是一个规范，它只定义了 Servlet 容器在处理服务器请求时应该具有怎样的行为，具体如何实现这些行为由 Servlet 容器来决定。
+Servlet 是运行在 web 服务器上的程序，它接收并响应来自 web 客户端的请求（通常是 HTTP 请求）。
 
 Servlet 规范有三个主要的技术点： Servlet, Filter, Listener  
 
-Servlet 是实现 Servlet 接口的程序，Servlet 规范规定它在 Servlet 加载时调用 init 方法，每次请求到来时调用 service 方法，Servlet 销毁时调用 destory 方法
+#### 1. Servlet
 
-Servlet 可以配置在容器启动时加载或者请求第一次到来时加载，但无论怎样都只会被初始化一次；可以为不同的 URL 配置不同的 Servlet
+Servlet 是实现 Servlet 接口的程序。对于 HTTP, 通常继承 javax.servlet.http.HttpServlet， 可以为不同的 URL 配置不同的 Servlet。Servlet 是"单例"的，对于共享变量（比如实例变量），需要自己保证其安全性。[**DispatcherServlet**](#dispatcher-servlet) 便是一个 Servlet。
 
-Lister 是监听某个对象的状态变化的组件，是一种观察者模式。
+Servlet 生命周期
+
+1. Servlet 实例化后，Servlet 容器会调用 ```init``` 方法初始化。init 只会被调用一次，且必须成功执行才能提供服务。
+
+2. 客户端每次发出请求，Servlet 容器调用 ```service``` 方法处理请求。
+
+3. Servlet 被销毁前，Servlet 容器调用 ```destroy``` 方法。通常用来清理资源，比如内存，文件，线程等。
+
+#### 2. Filter 
+Filter 是过滤器，用于在客户端的请求访问后端资源之前，拦截这些请求；或者在服务器的响应发送回客户端之前，处理这些响应。只有通过 Filter 的请求才能被 Servlet 处理。
+
+Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Servlet 执行前后（由 chain.doFilter 划分）处理特定的逻辑，如权限过滤，字符编码，日志打印，Session 处理，图片转换等
+
+Filter 生命周期
+
+1. Filter 实例化后，Servlet 容器会调用 ```init``` 方法初始化。init 方法只会被调用一次，且成功执行（不抛出错误且没有超时）才能提供过滤功能
+
+2. 客户端每次发出请求，Servlet 容器调用 ```doFilter``` 方法拦截请求。
+
+   ```java
+   public void  doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
+   
+       // 客户端的请求访问后端资源之前处理逻辑
+       System.out.println("我在 Servlet 前执行");
+   
+       // 把请求传回过滤链，即传给下一个 Filter, 或者交给 Servlet 处理
+       chain.doFilter(request,response);
+   
+       // 服务器的响应发送回客户端之前处理逻辑
+       System.out.println("我在 Servlet 后执行");
+   }
+   ```
+
+3. Filter 生命周期结束时调用 ```destroy``` 方法，通常用来清理它所持有的资源，比如内存，文件，线程等。
+
+#### 3. Listener 
+
+Listener 是监听某个对象的状态变化的组件，是一种观察者模式。
 
 被监听的对象可以是域对象 ServletContext, Session, Request
 
 监听的内容可以是域对象的创建与销毁，域对象属性的变化
 
-![servlet listernr](/img/spring/mvc/servlet-listener.png)
+||ServletContext|HttpSession|ServletRequest|
+|:--:|:--:|:--:|:--:|
+|对象的创建与销毁|ServletContextListener|HttpSessionListener|ServletRequestListener|
+|对象的属性的变化|ServletContextAttributeListener|HttpSessionAttributeListener|ServletRequestAttributeListener|
 
-Filter 过滤器，用来拦截客户请求, 只有通过 Filter 的请求（如果有的话）才能被 Servlet 处理。它同样会在容器启动时调用 init 方法，每次请求到来时执行 doFilter 方法，Filter 销毁时执行 destory 方法。
+[**ContextLoaderListener**](#contextloader-listener) 是一个 ServletContextListener, 它会监听 ServletContext 创建与销毁事件
 
-Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Servlet 执行前后（由 chain.doFilter 划分）处理特定的逻辑，如字符编码，日志打印，Session 处理等
+```java
+public interface ServletContextListener extends EventListener {
+
+    // 通知 ServletContext 已经实例化完成了，这个方法会在所有的 servlet 和 filter 实例化之前调用
+    public void contextInitialized(ServletContextEvent sce);
+
+    // 通知 ServletContext 将要被销毁了，这个方法会在所有的 servlet 和 filter 调用 destroy 之后执行
+    public void contextDestroyed(ServletContextEvent sce);
+
+}
+```
 
 ## Servlet 的配置与 SpringMVC 的实现
 
 <span id="web-xml"></span>
 #### 通过 web.xml
-这个是以前常用的配置方式。Servlet 容器会在启动时加载根路径下 /WEB-INF/web.xml 配置文件。根据其中的配置加载 Servlet, Listener, Filter 等。下面是 SpringMVC 的常见配置：
+这个是以前常用的配置方式。Servlet 容器会在启动时加载根路径下 /WEB-INF/web.xml 配置文件。根据其中的配置加载 Servlet, Listener, Filter 等，然后根据 Servlet 规范调用相应的方法。下面是 SpringMVC 的常见配置：
 
 ```xml
+    <listener>
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+    </listener>
+
     <context-param>
         <!--root web application context, 通过 ContextLoaderListener 加载-->
         <param-name>contextConfigLocation</param-name>
@@ -45,10 +97,6 @@ Filter 可以通过配置（xml 或 java-based）拦截特定的请求，在 Ser
         <!--WebApplicationContext 实现类-->
         <param-value>org.springframework.web.context.support.XmlWebApplicationContext</param-value>
     <context-param>
-
-    <listener>
-        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
-    </listener>
 
     <servlet>
         <servlet-name>dispatcher</servlet>
@@ -194,45 +242,45 @@ WebApplicationContext 继承自 ApplicationContext, 它定义了一些新的作�
 ```java
 public interface WebApplicationContext extends ApplicationContext {
 
-	//根容器名，作为 key 存储在 ServletContext 中; ServletContextListener 创建的 WebApplicationContext
-	String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
+    //根容器名，作为 key 存储在 ServletContext 中; ServletContextListener 创建的 WebApplicationContext
+    String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
 
-	/**
-	 * 这三个是 WebApplicationContext 所特有的作用域
+    /**
+     * 这三个是 WebApplicationContext 所特有的作用域
      * 通过 WebApplicationContextUtils.registerWebApplicationScopes 注册相应的处理器
-	 */
-	String SCOPE_REQUEST = "request";
-	String SCOPE_SESSION = "session";
-	String SCOPE_APPLICATION = "application";
+     */
+    String SCOPE_REQUEST = "request";
+    String SCOPE_SESSION = "session";
+    String SCOPE_APPLICATION = "application";
 
-	/**
-	 * ServletContext 在 WebApplicationContext 中的名字
+    /**
+     * ServletContext 在 WebApplicationContext 中的名字
      * 因此除了用 getServletContext() 方法获取到 ServletContext 外
      * 还可以通过此 key 获取到
      * 通过 WebApplicationContextUtils.registerEnvironmentBeans 注册到 WebApplicationContext 中
-	 */
-	String SERVLET_CONTEXT_BEAN_NAME = "servletContext";
+     */
+    String SERVLET_CONTEXT_BEAN_NAME = "servletContext";
 
-	/**
-	  * ServletContext 和 ServletConfig 配置参数在 WebApplicationContext 中的名字
-	  * ServletConfig 的参数具有更高的优先级，会覆盖掉 ServletContext 中的参数
+    /**
+      * ServletContext 和 ServletConfig 配置参数在 WebApplicationContext 中的名字
+      * ServletConfig 的参数具有更高的优先级，会覆盖掉 ServletContext 中的参数
       * 值为 Map<String, String> 结构
-	  */
-	String CONTEXT_PARAMETERS_BEAN_NAME = "contextParameters";
+      */
+    String CONTEXT_PARAMETERS_BEAN_NAME = "contextParameters";
 
-	/**
-	  * ServletContext 属性信息在 WebApplicationContext 中的名字
-	  * 值为 Map<String, String> 结构
+    /**
+      * ServletContext 属性信息在 WebApplicationContext 中的名字
+      * 值为 Map<String, String> 结构
       * 属性是用来 ServletContext 本身的一些信息的
-	  */
-	String CONTEXT_ATTRIBUTES_BEAN_NAME = "contextAttributes";
+      */
+    String CONTEXT_ATTRIBUTES_BEAN_NAME = "contextAttributes";
 
 
-	/**
-	 * Return the standard Servlet API ServletContext for this application.
-	 */
-	@Nullable
-	ServletContext getServletContext();
+    /**
+     * 获取 ServletContext 接口
+     */
+    @Nullable
+    ServletContext getServletContext();
 
 }
 ```
@@ -241,7 +289,7 @@ public interface WebApplicationContext extends ApplicationContext {
 
 ![web](/img/spring/ioc/application-context.png)
 
-ApplicationContext 有一个抽象实现类 AbstractApplicationContext, 模板方法的设计模式。它有一个 refresh 方法，它定义了**加载或初始化** bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, file, annotation, web 等，并且可以通过模板方法定制自己的需求。
+ApplicationContext 有一个抽象实现类 AbstractApplicationContext, 模板方法的设计模式。它有一个 refresh 方法，它定义了**加载或初始化** bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, annotation, web 等，并且可以通过模板方法定制自己的需求。
 
 AbstractApplicationContext 有两个实现体系, 他们的区别是每次 refresh 时是否会创建一个新的 DefaultListableBeanFactory。DefaultListableBeanFactory 是实际存放 bean 的容器, 提供 bean 注册功能。
 
@@ -249,7 +297,7 @@ AbstractApplicationContext 有两个实现体系, 他们的区别是每次 refre
 
 2. **GenericApplicationContext** 内部持有一个 DefaultListableBeanFactory, 所以可以提前将 Bean 加载到 DefaultListableBeanFactory, 它也有 refreshBeanFactory 方法，但是这个方法啥也不做。
 
-根据读取配置的方式，也可以分成 3 类，**基于 xml 的配置**, **基于 annotation 的配置**和**基于 java-based 的配置**
+根据读取配置的方式，可以分成 3 类，**基于 xml 的配置**, **基于 annotation 的配置**和**基于 java-based 的配置**
 
 1. 基于 xml 的配置使用 xml 作为配置方式, 此类的名字都含有 *Xml*, 比如从文件系统路径读取配置的 FilePathXmlApplicationContext, 从 ClassPath 读取配置的 ClassPathXmlApplicationContext, 基于 Web 的 XmlWebApplicationContext 等
 
@@ -259,9 +307,9 @@ AbstractApplicationContext 有两个实现体系, 他们的区别是每次 refre
 
 上面几个类是基础类，下面是 SpringMVC 相关的 WebApplicationContext
 
-XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext 继承自 AbstractRefreshableApplicationContext， 表示它们会在 refresh 时新创建一个 DefaultListableBeanFactory， 然后 loadBeanDefinitions。 从名字可以看出它们分别从 xml 和 注解类（通常是 @Configuration 注解的配置类）中读取配置信息。
+XmlWebApplicationContext 和 AnnotationConfigWebApplicationContext 继承自 AbstractRefreshableApplicationContext，表示它们会在 refresh 时新创建一个 DefaultListableBeanFactory， 然后 loadBeanDefinitions。 它们分别从 xml 和 注解类（通常是 @Configuration 注解的配置类）中读取配置信息。
 
-XmlEmbeddedWebApplicationContext 和 AnnotationConfigEmbeddedWebApplicationContext 与上面两个相似，从名字可以看出他们是用于 "Embedded" 方面的，即 SpringBoot 嵌入容器所使用的 WebApplicationContext 
+XmlEmbeddedWebApplicationContext 和 AnnotationConfigEmbeddedWebApplicationContext 继承自 GenericApplicationContext，表示他们内部持有一个 DefaultListableBeanFactory, 从名字可以看出它们是用于 "Embedded" 方面的，即 SpringBoot 嵌入容器所使用的 WebApplicationContext 
 
 SpringMVC 应用中几乎所有的类都交由 WebApplicationContext 管理，包括业务方面的 @Controller, @Service, @Repository 注解的类， ServletContext, 文件处理 multipartResolver, 视图解析器 ViewResolver, 处理器映射器 HandleMapping 等。
 
@@ -285,7 +333,7 @@ public void refresh() throws BeansException, IllegalStateException {
             // 在这里会配置一些 web 相关的东西，注册 web 相关的 scope
             postProcessBeanFactory(beanFactory);
 
-            //下面步骤和初始化其他 ApplicationContext 基本一致，忽略
+            // 下面步骤和初始化其他 ApplicationContext 基本一致，忽略
             invokeBeanFactoryPostProcessors(beanFactory);
             registerBeanPostProcessors(beanFactory);
             initMessageSource();
@@ -330,7 +378,7 @@ protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactor
     // bean 依赖: ServletRequest, ServletResponse, HttpSession, WebRequest, beanFactory
     WebApplicationContextUtils.registerWebApplicationScopes(beanFactory, this.servletContext);
 
-    //注册 servletContext, servletConfig, contextParameters, contextAttributes
+    // 注册 servletContext, servletConfig, contextParameters, contextAttributes
     WebApplicationContextUtils.registerEnvironmentBeans(beanFactory, this.servletContext, this.servletConfig);
 }
 ```
@@ -345,6 +393,7 @@ SpringMVC 通过两种方式创建 WebApplicationContext
 
 如果上下文容器的 parent 为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
 
+<span id="contextloader-listener"></span>
 ## ContextLoaderListener
 
 一般我们会配置（web.xml 或 java-based）一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 主要用来加载根容器。
@@ -374,8 +423,8 @@ public void contextInitialized(ServletContextEvent event) {
  * @see #CONFIG_LOCATION_PARAM
  */
 public WebApplicationContext initWebApplicationContext(ServletContext servletContext) {
-    //当前 ServletContext 中是否已经存在 root web applicationContext
-    //一个 ServletContext 中只能有一个 ServletContext
+    // 当前 ServletContext 中是否已经存在 root web applicationContext
+    // 一个 ServletContext 中只能有一个 ServletContext
     if (servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) != null) {
         throw new IllegalStateException(
                 "Cannot initialize context because there is already a root application context present - " +
@@ -392,7 +441,7 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
     try {
         // context 可以通过构造方法传入(这个在 java config 方式会用到)
         if (this.context == null) {
-            //若 web application 为空，创建一个, 这个一般是 web.xml 方式配置的
+            // 若 web application 为空，创建一个, 这个一般是 web.xml 方式配置的
             this.context = createWebApplicationContext(servletContext);
         }
         if (this.context instanceof ConfigurableWebApplicationContext) {
@@ -406,13 +455,13 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
                     ApplicationContext parent = loadParentContext(servletContext);
                     cwac.setParent(parent);
                 }
-                //设置 ID, ServletContext, contextConfigLocation
-                //执行 refresh 操作
+                // 设置 ID, ServletContext, contextConfigLocation
+                // 执行 refresh 操作
                 configureAndRefreshWebApplicationContext(cwac, servletContext);
             }
         }
 
-        // 将 context 设为 servlet context 参数
+        // 将 web application context 放进 servlet context 中
         // 因此可以调用 servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) 拿到这个 WebApplicationContext
         // 更简单的方法是通过 SpringMVC 提供的工具类 WebApplicationContextUtils.getWebApplicationContext(servletContext)
         servletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);
@@ -447,13 +496,13 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
 
 ```java
 protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
-    //决定使用哪个 WebApplicationContext 的实现类
+    // 决定使用哪个 WebApplicationContext 的实现类
     Class<?> contextClass = determineContextClass(sc);
     if (!ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)) {
         throw new ApplicationContextException("Custom context class [" + contextClass.getName() +
                 "] is not of type [" + ConfigurableWebApplicationContext.class.getName() + "]");
     }
-    //调用工具类实例化一个 WebApplicationContext
+    // 调用工具类实例化一个 WebApplicationContext
     return (ConfigurableWebApplicationContext) BeanUtils.instantiateClass(contextClass);
 }
 
@@ -462,7 +511,7 @@ ContextLoader#determineContextClass 根据 ```ContextLoader.CONTEXT_CLASS_PARAM`
 
 ```java
 protected Class<?> determineContextClass(ServletContext servletContext) {
-    //CONTEXT_CLASS_PARAM = "contextClass", 即在 web.xml 中配置的初始化参数 contextClass
+    // CONTEXT_CLASS_PARAM = "contextClass", 即在 web.xml 中配置的初始化参数 contextClass
     String contextClassName = servletContext.getInitParameter(CONTEXT_CLASS_PARAM);
     if (contextClassName != null) {
         try {
@@ -474,7 +523,7 @@ protected Class<?> determineContextClass(ServletContext servletContext) {
         }
     }
     else {
-        //如果未配置 contextClass， 从 defaultStrategies 属性文件中获取，下面会说到
+        // 如果未配置 contextClass， 从 defaultStrategies 属性文件中获取，下面会说到
         contextClassName = defaultStrategies.getProperty(WebApplicationContext.class.getName());
         try {
             return ClassUtils.forName(contextClassName, ContextLoader.class.getClassLoader());
@@ -490,13 +539,13 @@ protected Class<?> determineContextClass(ServletContext servletContext) {
 若 contextClass 未指定，则从 defaultStrategies 这个 Properties 中获取，他默认加载 ClassPath 路径下， ContextLoader.properties 文件中配置的类，默认为 XmlWebApplicationContext。
 
 ```java
-//属性文件中的类为 XmlWebApplicationContext。
+// 属性文件中的类为 XmlWebApplicationContext。
 private static final String DEFAULT_STRATEGIES_PATH = "ContextLoader.properties";
 
 
 private static final Properties defaultStrategies;
 
-//静态加载 XmlWebApplicationContext 到 defaultStrategies 中
+// 静态加载 XmlWebApplicationContext 到 defaultStrategies 中
 static {
     // Load default strategy implementations from properties file.
     // This is currently strictly internal and not meant to be customized
@@ -568,6 +617,7 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
 }
 ```
 
+<span id="dispatcher-servlet"></span>
 ## DispatcherServlet
 
 SpringMVC 将前端的所有请求都交给 DispatcherServlet 处理，他本质上是一个 Servlet，可以通过 web.xml 或者 java config 方式配置。
@@ -855,7 +905,7 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
     String viewName = mv.getViewName();
     if (viewName != null) {
         // 掉用 viewResolver 解析视图，返回一个视图对象
-        // 会遍历 viewResolvers 找到第一个匹配的处理, 返回
+        // 会遍历 viewResolvers 找到第一个匹配的处理, 返回 View 对象
         view = resolveViewName(viewName, mv.getModelInternal(), locale, request);
         if (view == null) {
             throw new ServletException("Could not resolve view with name '" + mv.getViewName() +
@@ -892,10 +942,14 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
 }
 ```
 
+## 结语
+
+写了不少，算是对 SpringMVC 的一次复习了。能力有限，如有不正确的地方，欢迎拍砖！
+
 参考：
-1. [servlet监听器Listener介绍和使用][1]  
-2. [UML各种图总结-精华][2]
+1. [servlet API][1]  
+2. [Spring MVC][2]
 
-[1]: https://blog.csdn.net/qq_15204179/article/details/82055448
+[1]: https://docs.oracle.com/javaee/7/api/toc.htm
 
-[2]: https://www.cnblogs.com/jiangds/p/6596595.html
+[2]: https://docs.spring.io/spring/docs/current/spring-framework-reference/web.html#spring-web
