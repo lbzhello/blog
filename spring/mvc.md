@@ -34,13 +34,13 @@ Filter 生命周期
    ```java
    public void  doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws java.io.IOException, ServletException {
    
-       // 客户端的请求访问后端资源之前处理逻辑
+       // 客户端的请求访问后端资源之前的处理逻辑
        System.out.println("我在 Servlet 前执行");
    
        // 把请求传回过滤链，即传给下一个 Filter, 或者交给 Servlet 处理
        chain.doFilter(request,response);
    
-       // 服务器的响应发送回客户端之前处理逻辑
+       // 服务器的响应发送回客户端之前的处理逻辑
        System.out.println("我在 Servlet 后执行");
    }
    ```
@@ -68,7 +68,7 @@ public interface ServletContextListener extends EventListener {
     // 通知 ServletContext 已经实例化完成了，这个方法会在所有的 servlet 和 filter 实例化之前调用
     public void contextInitialized(ServletContextEvent sce);
 
-    // 通知 ServletContext 将要被销毁了，这个方法会在所有的 servlet 和 filter 调用 destroy 之后执行
+    // 通知 ServletContext 将要被销毁了，这个方法会在所有的 servlet 和 filter 调用 destroy 之后调用
     public void contextDestroyed(ServletContextEvent sce);
 
 }
@@ -362,9 +362,9 @@ public void refresh() throws BeansException, IllegalStateException {
 }
 ```
 
-AbstractRefreshableApplicationContext 重写了 postProcessBeanFactory 方法
+AbstractRefreshableWebApplicationContext 重写了 postProcessBeanFactory 方法
 
-#### AbstractRefreshableApplicationContext#postProcessBeanFactory
+#### AbstractRefreshableWebApplicationContext#postProcessBeanFactory
 
 ```java
 @Override
