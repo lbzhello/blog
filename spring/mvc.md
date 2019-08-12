@@ -398,7 +398,7 @@ SpringMVC 通过两种方式创建 WebApplicationContext
 
 一般我们会配置（web.xml 或 java-based）一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 主要用来加载根容器。
 
-根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized. 
+根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized 方法。
 
 相关代码如下：
 ```java
@@ -624,7 +624,7 @@ SpringMVC 将前端的所有请求都交给 DispatcherServlet 处理，他本质
 
 DispatcherServlet 类图
 
-![dispatcher-servlet](/img/spring/mvc/dispatcher-servlet.png)
+![dispatcher-servlet](/img/spring/mvc/dispatcher-servlet-white.png)
 
 SpringMVC 将 DispatcherServlet 也当做一个 bean 来处理，所以对于一些 bean 的操作同样可以作用于 DispatcherServlet。
 
@@ -941,6 +941,10 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
     }
 }
 ```
+
+## 备注
+
+以上相关代码基于 SpringBoot 2.1.6.RELEASE, SpringMVC 5.1.6.RELEASE, Servlet 3.0
 
 ## 结语
 
