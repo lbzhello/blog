@@ -786,9 +786,81 @@ protected void initStrategies(ApplicationContext context) {
 
 因此可以根据需求，在 DispatcherServlet#onRefresh 之前将需要的策略类注册进 context, 它们会在 onRefresh 之后生效。
 
-## DispatcherServlet 处理请求
+## DispatcherServlet 处理流程
 
-根据 Servlet 规范和 SpringMVC 实现，其处理流程大致如下
+#### DispatcherServlet 中主要组件的简析
+
+**Handler**
+
+处理器。请求对应的处理方法，@Controller 注解的类的方法
+
+**HandlerInterceptor**
+
+拦截器。在 handler 执行前后及视图渲染后执行拦截，可以注册不同的 interceptor 定制工作流程
+
+```java
+
+public interface HandlerInterceptor {
+
+	/**
+	 * 在 handler 执行前拦截，返回 true 才能继续调用下一个 interceptor 或者 handler
+	 */
+	default boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+			throws Exception {
+
+		return true;
+	}
+
+	/**
+	 * 在 handler 执行后，视图渲染前进行拦截处理
+	 */
+	default void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+			@Nullable ModelAndView modelAndView) throws Exception {
+	}
+
+	/**
+	 * 视图渲染后，请求完成后进行处理，可以用来清理资源
+     * 除非 preHandle 放回 false，否则一定会执行，即使发生错误
+	 */
+	default void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
+			@Nullable Exception ex) throws Exception {
+	}
+
+}
+
+```
+
+**HandlerExecutionChain**
+
+处理器执行链。里面包含 handler 和 interceptors
+
+**HandlerMapping**
+
+处理器映射器。request -> handler 映射接口。主要有 BeanNameUrlHandlerMapping 和 RequestMappingHandlerMapping 两个实现类
+
+BeanNameUrlHandlerMapping 将 bean 名字作为 url 映射到相应的 handler, 也就是说 bean 名字必须是这种形式的： "/foo", "/bar"，这个应该是比较老的东西了
+
+RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler 相关联，即 @Controller 注解的类中 @RequestMapping 注解对应的方法
+
+**HandlerAdapter** 
+
+处理器适配器。适配器模式，通过他来调用具体的 handler
+
+**ViewResolver**
+
+视图解析器。其中的 resolveViewName 方法可以根据视图名字，解析出对应的 View 对象。可以配置不同的 viewResolver 来解析不同的 view, 常见的如 Jsp, Xml, Freemarker, Velocity 等
+
+**View**
+
+视图。不同的 viewResolver 对应不同 View 对象，具体的渲染逻辑提供者
+
+#### SpringMVC 处理请求流程图
+
+![mvc-process]("")
+
+#### DispatcherServlet 源码解析
+
+根据 Servlet 规范和 SpringMVC 实现，DispatcherServlet 处理流程大致如下
 
 **HttpServlet#service -> FrameworkServlet#processRequest -> DispatcherServlet#doService -> DispatcherServlet#doDispatch**
 
@@ -941,6 +1013,7 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
     }
 }
 ```
+
 
 ## 备注
 
