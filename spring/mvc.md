@@ -255,8 +255,6 @@ public interface WebApplicationContext extends ApplicationContext {
 
     /**
      * ServletContext 在 WebApplicationContext 中的名字
-     * 因此除了用 getServletContext() 方法获取到 ServletContext 外
-     * 还可以通过此 key 获取到
      * 通过 WebApplicationContextUtils.registerEnvironmentBeans 注册到 WebApplicationContext 中
      */
     String SERVLET_CONTEXT_BEAN_NAME = "servletContext";
@@ -271,7 +269,7 @@ public interface WebApplicationContext extends ApplicationContext {
     /**
       * ServletContext 属性信息在 WebApplicationContext 中的名字
       * 值为 Map<String, String> 结构
-      * 属性是用来 ServletContext 本身的一些信息的
+      * 属性是用来描述 ServletContext 本身的一些信息的
       */
     String CONTEXT_ATTRIBUTES_BEAN_NAME = "contextAttributes";
 
@@ -389,14 +387,14 @@ SpringMVC 通过两种方式创建 WebApplicationContext
 
 一种是通过 ContextLoaderListener, 它创建的 WebApplicationContext 称为 root application context，或者说根容器。一个 ServletContext 中只能有一个根容器，而一个 web application 中只能有一个 ServletContext，因此一个 web 应用程序中只能有一个根容器，**根容器不是必要的**。
 
-另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。**但是一般情况下没必要这样做**，多个 DispatcherServlet 不会降低耦合性，但却增加了复杂性。
+另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。但是一般情况下没必要这样做，多个 DispatcherServlet 不会降低耦合性，但却增加了复杂性。
 
 如果上下文容器的 parent 为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
 
 <span id="contextloader-listener"></span>
 ## ContextLoaderListener
 
-一般我们会配置（web.xml 或 java-based）一个 org.springframework.web.context.ContextLoaderListener, 它实现了 ServletContextListener 接口, 主要用来加载根容器。
+一般我们会配置（web.xml 或 java-based）一个 ContextLoaderListener, 它实现了 ServletContextListener 接口, 主要用来加载根容器。
 
 根据 Servelet 规范，这个 Listener 会在 ServletContext 创建时执行 ServletContextListener#contextInitialized 方法。
 
@@ -782,7 +780,77 @@ protected void initStrategies(ApplicationContext context) {
 
 ```
 
-这些策略方法的执行流程都是一样的，即从当前 context 中查找相应类型、相应名字的 bean，将他设为当前 DispatcherServlet 的成员变量，后面请求处理的时候会用到。
+这些策略方法的执行流程都是相似的，即从当前 context 中查找相应类型、相应名字的 bean，将他设为当前 DispatcherServlet 的成员变量。对于必须存在的 bean, 通过 DispatcherServlet.properties 文件提供。下面以 initHandlerMappings 为例说明
+
+**DispatcherServlet#initHandlerMappings**
+
+```java
+private void initHandlerMappings(ApplicationContext context) {
+    this.handlerMappings = null;
+
+    // 默认为 true， 表示查找所有的 HandlerMappings 实现类
+    if (this.detectAllHandlerMappings) {
+        // 从 ApplicationContext（包括父容器）中查找所有的 HandlerMappings
+        Map<String, HandlerMapping> matchingBeans =
+                BeanFactoryUtils.beansOfTypeIncludingAncestors(context, HandlerMapping.class, true, false);
+        if (!matchingBeans.isEmpty()) {
+            this.handlerMappings = new ArrayList<>(matchingBeans.values());
+            // We keep HandlerMappings in sorted order.
+            AnnotationAwareOrderComparator.sort(this.handlerMappings);
+        }
+    }
+    else {
+        try {
+            // 只加载名字为 handlerMapping 的 HandlerMapping
+            HandlerMapping hm = context.getBean(HANDLER_MAPPING_BEAN_NAME, HandlerMapping.class);
+            this.handlerMappings = Collections.singletonList(hm);
+        }
+        catch (NoSuchBeanDefinitionException ex) {
+            // Ignore, we'll add a default HandlerMapping later.
+        }
+    }
+
+    // 确保至少有一个 HandlerMapping
+    if (this.handlerMappings == null) {
+        // 加载默认的 HandlerMapping, 下面会说到
+        this.handlerMappings = getDefaultStrategies(context, HandlerMapping.class);
+        if (logger.isTraceEnabled()) {
+            logger.trace("No HandlerMappings declared for servlet '" + getServletName() +
+                    "': using default strategies from DispatcherServlet.properties");
+        }
+    }
+}
+```
+
+**DispatcherServlet#getDefaultStrategies**
+
+```java
+protected <T> List<T> getDefaultStrategies(ApplicationContext context, Class<T> strategyInterface) {
+    String key = strategyInterface.getName();
+    // defaultStrategies 会加载 DispatcherServlet.properties 文件中的类
+    String value = defaultStrategies.getProperty(key);
+    
+    // 后面反射创建 value 类，省略
+    ...
+}
+```
+
+下面位于 DispatcherServlet
+
+```java
+// 静态加载 DispatcherServlet.properties 文件中的类到 defaultStrategies
+static {
+    
+    try {
+        // DEFAULT_STRATEGIES_PATH = "DispatcherServlet.properties";
+        ClassPathResource resource = new ClassPathResource(DEFAULT_STRATEGIES_PATH, DispatcherServlet.class);
+        defaultStrategies = PropertiesLoaderUtils.loadProperties(resource);
+    }
+    catch (IOException ex) {
+        throw new IllegalStateException("Could not load '" + DEFAULT_STRATEGIES_PATH + "': " + ex.getMessage());
+    }
+}
+```
 
 因此可以根据需求，在 DispatcherServlet#onRefresh 之前将需要的策略类注册进 context, 它们会在 onRefresh 之后生效。
 
@@ -802,26 +870,19 @@ protected void initStrategies(ApplicationContext context) {
 
 public interface HandlerInterceptor {
 
-	/**
-	 * 在 handler 执行前拦截，返回 true 才能继续调用下一个 interceptor 或者 handler
-	 */
+    // 在 handler 执行前拦截，返回 true 才能继续调用下一个 interceptor 或者 handler
 	default boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
 			throws Exception {
-
 		return true;
 	}
 
-	/**
-	 * 在 handler 执行后，视图渲染前进行拦截处理
-	 */
+    // 在 handler 执行后，视图渲染前进行拦截处理
 	default void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
 			@Nullable ModelAndView modelAndView) throws Exception {
 	}
 
-	/**
-	 * 视图渲染后，请求完成后进行处理，可以用来清理资源
-     * 除非 preHandle 放回 false，否则一定会执行，即使发生错误
-	 */
+    //  视图渲染后，请求完成后进行处理，可以用来清理资源
+    // 除非 preHandle 放回 false，否则一定会执行，即使发生错误
 	default void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
 			@Nullable Exception ex) throws Exception {
 	}
@@ -836,11 +897,11 @@ public interface HandlerInterceptor {
 
 **HandlerMapping**
 
-处理器映射器。request -> handler 映射接口。主要有 BeanNameUrlHandlerMapping 和 RequestMappingHandlerMapping 两个实现类
+处理器映射器。request -> handler 的映射。主要有 BeanNameUrlHandlerMapping 和 RequestMappingHandlerMapping 两个实现类
 
 BeanNameUrlHandlerMapping 将 bean 名字作为 url 映射到相应的 handler, 也就是说 bean 名字必须是这种形式的： "/foo", "/bar"，这个应该是比较老的东西了
 
-RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler 相关联，即 @Controller 注解的类中 @RequestMapping 注解对应的方法
+RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler 相关联。
 
 **HandlerAdapter** 
 
@@ -852,7 +913,7 @@ RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler �
 
 **View**
 
-视图。不同的 viewResolver 对应不同 View 对象，具体的渲染逻辑提供者
+视图。不同的 viewResolver 对应不同 View 对象，渲染方法 render
 
 #### SpringMVC 处理请求流程图
 
@@ -862,7 +923,7 @@ RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler �
 2. DispatcherServlet 通过 handlerMapping 找到请求对应的 handler，返回一个 HandlerExecutionChain 里面包含 interceptors 和 handler
 3. DispatcherServlet 通过 handlerAdapter 调用实际的 handler 处理业务逻辑, 返回 ModelAndView。里面会包含逻辑视图名和 model 数据。注意，**在此之前和之后，会分别调用 interceptors 拦截处理**
 4. 调用 viewResolver 将逻辑视图名解析成 view 返回
-5. 渲染视图，写进 response。然后 interceptors 和 filter 依次拦截处理，最后返回给客户端
+5. 调用 view.render 渲染视图，写进 response。然后 interceptors 和 filter 依次拦截处理，最后返回给客户端
 
 下面结合源码看一看
 
