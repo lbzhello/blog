@@ -856,11 +856,19 @@ RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler �
 
 #### SpringMVC 处理请求流程图
 
-![mvc-process]("")
+![mvc-process](/img/spring/mvc/dispatcher-process.png)
+
+1. 客户端发出请求，会先经过 filter 过滤，通过的请求才能到达 DispatcherServlet。
+2. DispatcherServlet 通过 handlerMapping 找到请求对应的 handler，返回一个 HandlerExecutionChain 里面包含 interceptors 和 handler
+3. DispatcherServlet 通过 handlerAdapter 调用实际的 handler 处理业务逻辑, 返回 ModelAndView。里面会包含逻辑视图名和 model 数据。注意，**在此之前和之后，会分别调用 interceptors 拦截处理**
+4. 调用 viewResolver 将逻辑视图名解析成 view 返回
+5. 渲染视图，写进 response。然后 interceptors 和 filter 依次拦截处理，最后返回给客户端
+
+下面结合源码看一看
 
 #### DispatcherServlet 源码解析
 
-根据 Servlet 规范和 SpringMVC 实现，DispatcherServlet 处理流程大致如下
+DispatcherServlet 是一个 servlet，他的调用流程大致如下
 
 **HttpServlet#service -> FrameworkServlet#processRequest -> DispatcherServlet#doService -> DispatcherServlet#doDispatch**
 
@@ -891,7 +899,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
                 return;
             }
 
-            // 查找请求对应的 handler adapter
+            // 根据 handler 匹配对应的 handlerAdapter
             HandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
 
             // Process last-modified header, if supported by the handler.
@@ -976,7 +984,7 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
     // 这个是 @Controller 返回的名字 
     String viewName = mv.getViewName();
     if (viewName != null) {
-        // 掉用 viewResolver 解析视图，返回一个视图对象
+        // 调用 viewResolver 解析视图，返回一个视图对象
         // 会遍历 viewResolvers 找到第一个匹配的处理, 返回 View 对象
         view = resolveViewName(viewName, mv.getModelInternal(), locale, request);
         if (view == null) {
