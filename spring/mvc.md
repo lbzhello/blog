@@ -827,7 +827,6 @@ private void initHandlerMappings(ApplicationContext context) {
 ```java
 protected <T> List<T> getDefaultStrategies(ApplicationContext context, Class<T> strategyInterface) {
     String key = strategyInterface.getName();
-    // defaultStrategies 会加载 DispatcherServlet.properties 文件中的类
     String value = defaultStrategies.getProperty(key);
     
     // 后面反射创建 value 类，省略
