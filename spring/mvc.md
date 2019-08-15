@@ -242,7 +242,7 @@ WebApplicationContext 继承自 ApplicationContext, 它定义了一些新的作�
 ```java
 public interface WebApplicationContext extends ApplicationContext {
 
-    //根容器名，作为 key 存储在 ServletContext 中; ServletContextListener 创建的 WebApplicationContext
+    //根容器名，作为 key 存储在 ServletContext 中; ServletContext 持有的 WebApplicationContext
     String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
 
     /**
@@ -385,9 +385,9 @@ protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactor
 
 SpringMVC 通过两种方式创建 WebApplicationContext
 
-一种是通过 ContextLoaderListener, 它创建的 WebApplicationContext 称为 root application context，或者说根容器。一个 ServletContext 中只能有一个根容器，而一个 web application 中只能有一个 ServletContext，因此一个 web 应用程序中只能有一个根容器，**根容器不是必要的**。
+一种是通过 ContextLoaderListener, 它创建的 WebApplicationContext 称为 root application context，或者说根容器。一个 ServletContext 中只能有一个根容器，而一个 web application 中只能有一个 ServletContext，因此一个 web 应用程序中只能有一个根容器，根容器的作用和 ServletContext 类似，提供了一个全局的访问点，可以用于注册多个 servlet 共享的业务 bean。 **根容器不是必要的**。
 
-另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。但是一般情况下没必要这样做，多个 DispatcherServlet 不会降低耦合性，但却增加了复杂性。
+另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。
 
 如果上下文容器的 parent 为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
 
@@ -1082,6 +1082,15 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
 }
 ```
 
+## 总结
+
+1. SpringMVC 是基于 Servlet 的, 因此 SpringMVC 的启动流程基于 Servlet 的启动流程
+
+2. ServletContext 持有的 WebApplicationContext 称为根容器; 根容器在一个 web 应用中都可以访问到，因此可以注册注册业务共享的 bean；如果不需要可以不创建，根容器不是必须的
+
+3. 根容器是指在 ServletContext 中以 WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE 为 key 的 WebApplicationContext。根容器并不一定要由 ContextLoaderListener 创建。
+
+4. DispatcherServlet 持有的 WebApplicationContext 称为它的上下文容器；每个 DispatcherServlet 都持有一个上下文容器。上下文容器是必须的。
 
 ## 备注
 
