@@ -285,7 +285,7 @@ public interface WebApplicationContext extends ApplicationContext {
 
 #### WebApplicationContext 类图
 
-![web](/img/spring/ioc/application-context.png)
+![web](/img/spring/mvc/application-context-white.png)
 
 ApplicationContext 有一个抽象实现类 AbstractApplicationContext, 模板方法的设计模式。它有一个 refresh 方法，它定义了**加载或初始化** bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, annotation, web 等，并且可以通过模板方法定制自己的需求。
 
@@ -405,7 +405,7 @@ public void contextInitialized(ServletContextEvent event) {
     initWebApplicationContext(event.getServletContext());
 }
 ```
-
+<span id="get-web-application-context"></span>
 #### ContextLoader#initWebApplicationContext 
 
 ```java
@@ -616,7 +616,7 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
 ```
 
 <span id="dispatcher-servlet"></span>
-## DispatcherServlet
+## DispatcherServlet 初始化流程
 
 SpringMVC 将前端的所有请求都交给 DispatcherServlet 处理，他本质上是一个 Servlet，可以通过 web.xml 或者 java config 方式配置。
 
@@ -645,7 +645,7 @@ Servlet 容器会在启动时调用 init 方法。完成一些初始化操作，
  * @see #setContextConfigLocation
  */
 protected WebApplicationContext initWebApplicationContext() {
-    // 获取 root web application context
+    // 获取根容器，ServletContext 持有的 WebApplicationContext
     WebApplicationContext rootContext =
             WebApplicationContextUtils.getWebApplicationContext(getServletContext());
     // 上下文容器，当前 DispatcherServlet 持有的 WebApplicationContext
@@ -870,21 +870,21 @@ static {
 public interface HandlerInterceptor {
 
     // 在 handler 执行前拦截，返回 true 才能继续调用下一个 interceptor 或者 handler
-	default boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
-			throws Exception {
-		return true;
-	}
+    default boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
+            throws Exception {
+        return true;
+    }
 
     // 在 handler 执行后，视图渲染前进行拦截处理
-	default void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
-			@Nullable ModelAndView modelAndView) throws Exception {
-	}
+    default void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
+            @Nullable ModelAndView modelAndView) throws Exception {
+    }
 
     //  视图渲染后，请求完成后进行处理，可以用来清理资源
     // 除非 preHandle 放回 false，否则一定会执行，即使发生错误
-	default void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
-			@Nullable Exception ex) throws Exception {
-	}
+    default void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
+            @Nullable Exception ex) throws Exception {
+    }
 
 }
 
@@ -912,8 +912,9 @@ RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler �
 
 **View**
 
-视图。不同的 viewResolver 对应不同 View 对象，渲染方法 render
+视图。不同的 viewResolver 对应不同 View 对象，调用 view.render 方法渲染视图
 
+<span id="mvc-process"></span>
 #### SpringMVC 处理请求流程图
 
 ![mvc-process](/img/spring/mvc/dispatcher-process.png)
@@ -926,7 +927,7 @@ RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler �
 
 下面结合源码看一看
 
-#### DispatcherServlet 源码解析
+#### DispatcherServlet 请求处理源码解析
 
 DispatcherServlet 是一个 servlet，他的调用流程大致如下
 
@@ -1086,11 +1087,19 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
 
 1. SpringMVC 是基于 Servlet 的, 因此 SpringMVC 的启动流程基于 Servlet 的启动流程
 
-2. ServletContext 持有的 WebApplicationContext 称为根容器; 根容器在一个 web 应用中都可以访问到，因此可以注册注册业务共享的 bean；如果不需要可以不创建，根容器不是必须的
+2. ServletContext 持有的 WebApplicationContext 称为根容器; 根容器在一个 web 应用中都可以访问到，因此可以用于注册共享的 bean；如果不需要可以不创建，根容器不是必要的
 
 3. 根容器是指在 ServletContext 中以 WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE 为 key 的 WebApplicationContext。根容器并不一定要由 ContextLoaderListener 创建。
 
-4. DispatcherServlet 持有的 WebApplicationContext 称为它的上下文容器；每个 DispatcherServlet 都持有一个上下文容器。上下文容器是必须的。
+4. DispatcherServlet 持有的 WebApplicationContext 称为它的上下文容器；每个 DispatcherServlet 都持有一个上下文容器。上下文容器是必要的。
+
+5. SpringMVC 的处理流程并不一定按[上面的顺序](#mvc-process)执行，比如如果是 json 请求，HandlerAdapter 调用 handler 处理后返回的 mv 可能是 null, 后面就不会进行视图渲染
+
+6. 请求如果没有到达 DispatcherServlet 可能是被过滤器过滤了（权限？异常？）；一定不是拦截器拦截的，因为拦截器在 DispatcherServlet 内部执行。
+
+7. 除非请求被 interceptor#preHandle 拦截，否则 interceptor#afterCompletion 一定会执行，即使发生错误。
+
+8. 获取 WebApplicationContext, 除了相关 Aware 接口，还可以通过 WebApplicationContextUtils.getWebApplicationContext 获取根容器，相关原理在[这里](#get-web-application-context), 或者通过 RequestContextUtils.findWebApplicationContext 获取当前 DispatcherServlet 对应的上下文容器，相关代码在 DispatcherServlet#doService
 
 ## 备注
 
