@@ -1091,11 +1091,11 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
 
 3. 根容器是指在 ServletContext 中以 WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE 为 key 的 WebApplicationContext。根容器并不一定要由 ContextLoaderListener 创建。
 
-4. DispatcherServlet 持有的 WebApplicationContext 称为它的上下文容器；每个 DispatcherServlet 都持有一个上下文容器。上下文容器是必要的。
+4. DispatcherServlet 持有的 WebApplicationContext 称为它的上下文容器；每个 DispatcherServlet 都会持有一个上下文容器(自己创建或者构造传入)。
 
 5. SpringMVC 的处理流程并不一定按[上面的顺序](#mvc-process)执行，比如如果是 json 请求，HandlerAdapter 调用 handler 处理后返回的 mv 可能是 null, 后面就不会进行视图渲染
 
-6. 请求如果没有到达 DispatcherServlet 可能是被过滤器过滤了（权限？异常？）；一定不是拦截器拦截的，因为拦截器在 DispatcherServlet 内部执行。
+6. 请求如果没有到达 DispatcherServlet 可能是被过滤器过滤了（权限？异常？）；一定不是被拦截器拦截的，因为拦截器在 DispatcherServlet 内部执行。
 
 7. 除非请求被 interceptor#preHandle 拦截，否则 interceptor#afterCompletion 一定会执行，即使发生错误。
 
