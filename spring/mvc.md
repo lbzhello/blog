@@ -10,7 +10,7 @@ Servlet 规范有三个主要的技术点： Servlet, Filter, Listener
 
 #### 1. Servlet
 
-Servlet 是实现 Servlet 接口的程序。对于 HTTP, 通常继承 javax.servlet.http.HttpServlet， 可以为不同的 URL 配置不同的 Servlet。Servlet 是"单例"的，对于共享变量（比如实例变量），需要自己保证其安全性。[**DispatcherServlet**](#dispatcher-servlet) 便是一个 Servlet。
+Servlet 是实现 Servlet 接口的程序。对于 HTTP, 通常继承 javax.servlet.http.HttpServlet， 可以为不同的 URL 配置不同的 Servlet。Servlet 是"单例"的，所有请求公用一个 Servlet, 因此对于共享变量（比如实例变量），需要自己保证其线程安全性。[**DispatcherServlet**](#dispatcher-servlet) 便是一个 Servlet。
 
 Servlet 生命周期
 
@@ -82,6 +82,7 @@ public interface ServletContextListener extends EventListener {
 
 ```xml
     <listener>
+        <!--监听器，用来管理 root WebApplicationContext 的生命周期：加载、初始化、销毁-->
         <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
     </listener>
 
@@ -178,18 +179,19 @@ public class MyWebAppInitializer implements WebApplicationInitializer {
  
     @Override
     public void onStartup(ServletContext container) {
-        // Create the 'root' Spring application context
+        // 创建根容器
         AnnotationConfigWebApplicationContext rootContext = new AnnotationConfigWebApplicationContext();
         rootContext.register(AppConfig.class);
 
-        // Manage the lifecycle of the root application context
+        // 创建 ContextLoaderListener
+        // 用来管理 root WebApplicationContext 的生命周期：加载、初始化、销毁
         container.addListener(new ContextLoaderListener(rootContext));
 
-        // Create the dispatcher servlet's Spring application context
+        // 创建 dispatcher servlet
         AnnotationConfigWebApplicationContext dispatcherContext = new AnnotationConfigWebApplicationContext();
         dispatcherContext.register(DispatcherConfig.class);
 
-        // Register and map the dispatcher servlet
+        // 注册、配置 dispatcher servlet
         ServletRegistration.Dynamic dispatcher = container.addServlet("dispatcher", new DispatcherServlet(dispatcherContext));
         dispatcher.setLoadOnStartup(1);
         dispatcher.addMapping("/");
@@ -246,7 +248,7 @@ public interface WebApplicationContext extends ApplicationContext {
     String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
 
     /**
-     * 这三个是 WebApplicationContext 所特有的作用域
+     * 这三个是 WebApplicationContext 特有的作用域
      * 通过 WebApplicationContextUtils.registerWebApplicationScopes 注册相应的处理器
      */
     String SCOPE_REQUEST = "request";
@@ -287,7 +289,7 @@ public interface WebApplicationContext extends ApplicationContext {
 
 ![web](/img/spring/mvc/application-context-white.png)
 
-ApplicationContext 有一个抽象实现类 AbstractApplicationContext, 模板方法的设计模式。它有一个 refresh 方法，它定义了**加载或初始化** bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, annotation, web 等，并且可以通过模板方法定制自己的需求。
+ApplicationContext 有一个抽象实现类 **AbstractApplicationContext**, 模板方法的设计模式。它有一个 refresh 方法，它定义了加载或初始化 bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, annotation, web 等，并且可以通过模板方法定制自己的需求。
 
 AbstractApplicationContext 有两个实现体系, 他们的区别是每次 refresh 时是否会创建一个新的 DefaultListableBeanFactory。DefaultListableBeanFactory 是实际存放 bean 的容器, 提供 bean 注册功能。
 
@@ -615,6 +617,16 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
 }
 ```
 
+**小结：** ContextLoaderListener 的初始化流程可以用下面的代码表示
+
+```python
+def initWebApplicationContext():
+    if context == null:
+        context = createWebApplicationContext()
+
+    configureAndRefreshWebApplicationContext(context)
+```
+
 <span id="dispatcher-servlet"></span>
 ## DispatcherServlet 初始化流程
 
@@ -624,7 +636,7 @@ DispatcherServlet 类图
 
 ![dispatcher-servlet](/img/spring/mvc/dispatcher-servlet-white.png)
 
-SpringMVC 将 DispatcherServlet 也当做一个 bean 来处理，所以对于一些 bean 的操作同样可以作用于 DispatcherServlet。
+SpringMVC 将 DispatcherServlet 也当做一个 bean 来处理，所以对于一些 bean 的操作同样可以作用于 DispatcherServlet, 比如相关 *Aware 接口。
 
 Servlet 容器会在启动时调用 init 方法。完成一些初始化操作，其调用流程如下：
 
@@ -827,6 +839,7 @@ private void initHandlerMappings(ApplicationContext context) {
 ```java
 protected <T> List<T> getDefaultStrategies(ApplicationContext context, Class<T> strategyInterface) {
     String key = strategyInterface.getName();
+    // 从 defaultStrategies 这个 Properties 中获取
     String value = defaultStrategies.getProperty(key);
     
     // 后面反射创建 value 类，省略
@@ -852,6 +865,21 @@ static {
 ```
 
 因此可以根据需求，在 DispatcherServlet#onRefresh 之前将需要的策略类注册进 context, 它们会在 onRefresh 之后生效。
+
+**小结：** DispatcherServlet 的初始化流程可以表示为
+
+```python
+def initWebApplicationContext():
+    rootContext = WebApplicationContextUtils.getWebApplicationContext(getServletContext())
+  
+    if context == null:
+        context = createWebApplicationContext(rootContext)
+
+    context.setParent(rootContext)
+    configureAndRefreshWebApplicationContext(context)
+
+    onRefresh(context)
+```
 
 ## DispatcherServlet 处理流程
 
