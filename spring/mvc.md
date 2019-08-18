@@ -496,6 +496,8 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
 #### ContextLoader#createWebApplicationContext
 
 ```java
+// web.xml 配置方式需要调用此方法创建 WebApplicationContext
+// java-config 一般通过构造方法传入，不需要再创建，上面有示例
 protected WebApplicationContext createWebApplicationContext(ServletContext sc) {
     // 决定使用哪个 WebApplicationContext 的实现类
     Class<?> contextClass = determineContextClass(sc);
@@ -724,7 +726,8 @@ DispatcherServlet 持有的 WebApplicationContext 可以通构造方法传入，
 #### FrameworkServlet#createWebApplicationContext
 
 ```java
-// web.xml 配置方式需要调用此方法创建一个 WebApplicationContext
+// web.xml 配置方式需要调用此方法创建 WebApplicationContext
+// java-config 一般通过构造方法传入，不需要再创建，上面有示例
 protected WebApplicationContext createWebApplicationContext(@Nullable ApplicationContext parent) {
     // 返回 WebApplicationContext 的实现类，默认为 XmlWebApplicationContext
     Class<?> contextClass = getContextClass();
