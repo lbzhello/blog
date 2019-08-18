@@ -10,7 +10,7 @@ Servlet 规范有三个主要的技术点： Servlet, Filter, Listener
 
 #### 1. Servlet
 
-Servlet 是实现 Servlet 接口的程序。对于 HTTP, 通常继承 javax.servlet.http.HttpServlet， 可以为不同的 URL 配置不同的 Servlet。Servlet 是"单例"的，所有请求公用一个 Servlet, 因此对于共享变量（比如实例变量），需要自己保证其线程安全性。[**DispatcherServlet**](#dispatcher-servlet) 便是一个 Servlet。
+Servlet 是实现 Servlet 接口的程序。对于 HTTP, 通常继承 javax.servlet.http.HttpServlet， 可以为不同的 URL 配置不同的 Servlet。Servlet 是"单例"的，所有请求共用一个 Servlet, 因此对于共享变量（比如实例变量），需要自己保证其线程安全性。[**DispatcherServlet**](#dispatcher-servlet) 便是一个 Servlet。
 
 Servlet 生命周期
 
@@ -244,7 +244,7 @@ WebApplicationContext 继承自 ApplicationContext, 它定义了一些新的作�
 ```java
 public interface WebApplicationContext extends ApplicationContext {
 
-    //根容器名，作为 key 存储在 ServletContext 中; ServletContext 持有的 WebApplicationContext
+    // 根容器名，作为 key 存储在 ServletContext 中; ServletContext 持有的 WebApplicationContext
     String ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE = WebApplicationContext.class.getName() + ".ROOT";
 
     /**
@@ -424,7 +424,7 @@ public void contextInitialized(ServletContextEvent event) {
  */
 public WebApplicationContext initWebApplicationContext(ServletContext servletContext) {
     // 当前 ServletContext 中是否已经存在 root web applicationContext
-    // 一个 ServletContext 中只能有一个 ServletContext
+    // 一个 ServletContext 中只能有一个根容器
     if (servletContext.getAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE) != null) {
         throw new IllegalStateException(
                 "Cannot initialize context because there is already a root application context present - " +
@@ -492,6 +492,7 @@ public WebApplicationContext initWebApplicationContext(ServletContext servletCon
 
 如果 context 为 null, 则创建一个
 
+<span id="context-loader-create-web-application-context"></span>
 #### ContextLoader#createWebApplicationContext
 
 ```java
@@ -605,7 +606,7 @@ protected void configureAndRefreshWebApplicationContext(ConfigurableWebApplicati
         ((ConfigurableWebEnvironment) env).initPropertySources(sc, null);
     }
 
-    // 主要调用 ApplicationContextInitializer 接口，在 refresh 之前定制一些信息
+    // ApplicationContextInitializer 回调接口，在 refresh 之前定制一些信息
     customizeContext(sc, wac);
 
     // 所有的 ApplicationContext 调用 refresh 之后才可用，此方法位于
@@ -714,6 +715,44 @@ protected WebApplicationContext initWebApplicationContext() {
 
     return wac;
 }
+```
+
+DispatcherServlet 持有的 WebApplicationContext 可以通构造方法传入，或者 createWebApplicationContext 方法创建
+
+创建容器步骤和 [ContextLoader#createWebApplicationContext](#context-loader-create-web-application-context) 有所不同
+
+#### FrameworkServlet#createWebApplicationContext
+
+```java
+// web.xml 配置方式需要调用此方法创建一个 WebApplicationContext
+protected WebApplicationContext createWebApplicationContext(@Nullable ApplicationContext parent) {
+    // 返回 WebApplicationContext 的实现类，默认为 XmlWebApplicationContext
+    Class<?> contextClass = getContextClass();
+    if (!ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)) {
+        throw new ApplicationContextException(
+                "Fatal initialization error in servlet with name '" + getServletName() +
+                "': custom WebApplicationContext class [" + contextClass.getName() +
+                "] is not of type ConfigurableWebApplicationContext");
+    }
+    ConfigurableWebApplicationContext wac =
+            (ConfigurableWebApplicationContext) BeanUtils.instantiateClass(contextClass);
+
+    wac.setEnvironment(getEnvironment());
+    // parent 为 rootContext
+    wac.setParent(parent);
+
+    // 获 bean 取配置文件位置
+    String configLocation = getContextConfigLocation();
+    if (configLocation != null) {
+        wac.setConfigLocation(configLocation);
+    }
+
+    // 配置，刷新容器，下面会说到
+    configureAndRefreshWebApplicationContext(wac);
+
+    return wac;
+}
+
 ```
 
 #### FrameworkServlet#configureAndRefreshWebApplicationContext
