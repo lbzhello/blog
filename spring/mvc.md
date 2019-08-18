@@ -1,4 +1,13 @@
-## SpringMVC 设计原理
+## SpringMVC 原理 - 设计原理、启动过程、请求处理详细解读
+
+## 目录
+
+[一、 设计原理](#design)  
+[二、 启动过程](#init)  
+[三、 请求处理](#process)  
+
+<span id="design"></span>
+## 一、 设计原理
 
 ## Servlet 规范
 
@@ -384,6 +393,9 @@ protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactor
 ```
 
 这些方法都比较简单，不再展开
+
+<span id="init"></span>
+## 二、 启动过程
 
 SpringMVC 通过两种方式创建 WebApplicationContext
 
@@ -922,6 +934,8 @@ def initWebApplicationContext():
 
     onRefresh(context)
 ```
+<span id="process"></span>
+## 三、 请求处理
 
 ## DispatcherServlet 处理流程
 
@@ -1047,7 +1061,7 @@ protected void doDispatch(HttpServletRequest request, HttpServletResponse respon
                 return;
             }
 
-            // 调用 handler, 就是 @Controller 注解的类
+            // 调用 handler, 就是 @Controller 注解的类对应的方法
             // 如果是一个 rest 请求，mv 为 null，后面不会再调用 render 方法
             mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
 
@@ -1111,7 +1125,7 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
     response.setLocale(locale);
 
     View view;
-    // 这个是 @Controller 返回的名字 
+    // 这个是 @Controller 方法返回的名字 
     String viewName = mv.getViewName();
     if (viewName != null) {
         // 调用 viewResolver 解析视图，返回一个视图对象
