@@ -940,20 +940,19 @@ def initWebApplicationContext():
 public interface HandlerInterceptor {
 
     // 在 handler 执行前拦截，返回 true 才能继续调用下一个 interceptor 或者 handler
-    default boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
-            throws Exception {
+    default boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         return true;
     }
 
     // 在 handler 执行后，视图渲染前进行拦截处理
     default void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler,
-            @Nullable ModelAndView modelAndView) throws Exception {
+        @Nullable ModelAndView modelAndView) throws Exception {
     }
 
-    //  视图渲染后，请求完成后进行处理，可以用来清理资源
+    // 视图渲染后，请求完成后进行处理，可以用来清理资源
     // 除非 preHandle 放回 false，否则一定会执行，即使发生错误
     default void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler,
-            @Nullable Exception ex) throws Exception {
+        @Nullable Exception ex) throws Exception {
     }
 
 }
