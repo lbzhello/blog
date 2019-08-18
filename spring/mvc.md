@@ -394,9 +394,6 @@ protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactor
 
 这些方法都比较简单，不再展开
 
-<span id="init"></span>
-## 二、 启动过程
-
 SpringMVC 通过两种方式创建 WebApplicationContext
 
 一种是通过 ContextLoaderListener, 它创建的 WebApplicationContext 称为 root application context，或者说根容器。一个 ServletContext 中只能有一个根容器，而一个 web application 中只能有一个 ServletContext，因此一个 web 应用程序中只能有一个根容器，根容器的作用和 ServletContext 类似，提供了一个全局的访问点，可以用于注册多个 servlet 共享的业务 bean。 **根容器不是必要的**。
@@ -404,6 +401,9 @@ SpringMVC 通过两种方式创建 WebApplicationContext
 另一种是通过 DispatcherServlet, 它创建的 WebApplicationContext，称为上下文容器，上下文容器只在 DispatcherServlet 范围内有效。DispatcherServlet 本质上是一个 Servlet，因此可以有多个 DispatcherServlet，也就可以有多个上下文容器。
 
 如果上下文容器的 parent 为 null, 并且当前 ServletContext 中存在根容器，则把根容器设为他的父容器。
+
+<span id="init"></span>
+## 二、 启动过程
 
 <span id="contextloader-listener"></span>
 ## ContextLoaderListener
