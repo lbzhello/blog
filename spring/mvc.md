@@ -124,6 +124,7 @@ public interface ServletContextListener extends EventListener {
     </servlet-mapping>
 ```
 
+<span id="context-initializer"></span>
 #### 通过 ServletContainerInitializer
 这个是 Servlet 3.0 的规范，新的 code-based 的配置方式。简单来说就是容器会去加载文件JAR包下 META-INF/services/javax.servlet.ServletContainerInitalizer 文件中声明的 ServletContainerInitalizer（SCI） 实现类，并调用他的 onStartup 方法，可以通过 @HandlesTypes 注解将特定的 class 添加到 SCI。
 
@@ -1183,6 +1184,8 @@ protected void render(ModelAndView mv, HttpServletRequest request, HttpServletRe
 7. 除非请求被 interceptor#preHandle 拦截，否则 interceptor#afterCompletion 一定会执行，即使发生错误。
 
 8. 获取 WebApplicationContext, 除了相关 Aware 接口，还可以通过 WebApplicationContextUtils.getWebApplicationContext 获取根容器，相关原理在[这里](#get-web-application-context), 或者通过 RequestContextUtils.findWebApplicationContext 获取当前 DispatcherServlet 对应的上下文容器，相关代码在 DispatcherServlet#doService
+
+9. SpringBoot 应用部署到外部容器的时候为啥要继承 SpringBootServletInitializer, 因为它是一个 WebApplicationContextInitializer, 具体见[这里](#context-initializer)
 
 ## 备注
 
