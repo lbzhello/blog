@@ -196,7 +196,7 @@ public class MyWebAppInitializer implements WebApplicationInitializer {
         // 用来管理 root WebApplicationContext 的生命周期：加载、初始化、销毁
         container.addListener(new ContextLoaderListener(rootContext));
 
-        // 创建 dispatcher servlet
+        // 创建 dispatcher 持有的上下文容器
         AnnotationConfigWebApplicationContext dispatcherContext = new AnnotationConfigWebApplicationContext();
         dispatcherContext.register(DispatcherConfig.class);
 
