@@ -197,3 +197,8 @@ public GenericApplicationContext() {
 
 1. DefaultBeanDefinitionDocumentReader 解析 Xml Bean 标签定义的 Bean
 processBeanDefinition
+
+### @Configuration 注解 @Bean 方法返回的类在 invokeBeanFactoryPostProcessors 阶段注册到 beanFactory 中
+
+org.springframework.context.annotation.internalConfigurationAnnotationProcessor = ConfigurationClassPostProcessor
+AnnotationConfigUtils.registerAnnotationConfigProcessors
