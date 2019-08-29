@@ -202,3 +202,5 @@ processBeanDefinition
 
 org.springframework.context.annotation.internalConfigurationAnnotationProcessor = ConfigurationClassPostProcessor
 AnnotationConfigUtils.registerAnnotationConfigProcessors
+
+#### @Configuration 等注解支持构造参数注入
