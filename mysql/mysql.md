@@ -30,13 +30,13 @@ BINARY 和 VARBINARY 用于存储二进制字符串，即存储的是字节码�
 
 BLOB 采用二进制存储，没有排序规则和字符集
 
-|类型|TINYBLOB|SMALLBLOB/BLOB|MEDIUMBLOB|LONGBLOB
+|类型|TINYBLOB|SMALLBLOB/BLOB|MEDIUMBLOB|LONGBLOB|
 |:--:|:--:|:--:|:--:|:--:|:--:|
 |最大|255|65K|16M|4G|
 
 TEXT 采用字符存储， 有排序规则和字符集
 
-|类型|TINYTEXT|SMALLTEXT/TEXT|MEDIUMTEXT|LONGTEXT
+|类型|TINYTEXT|SMALLTEXT/TEXT|MEDIUMTEXT|LONGTEXT|
 |:--:|:--:|:--:|:--:|:--:|:--:|
 |字节|255|65K|16M|4G|
 
