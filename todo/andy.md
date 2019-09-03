@@ -7,7 +7,7 @@ def max(a, b, c, d, e) {
 a = 23
 b = 44
 
-max(1, 2)(4, 5)[6, 7]{
+max (1, 2) (4, 5) [6, 7] {
     rst = if(a > b) a else b
     rst * 3
 }{it -> 
@@ -42,7 +42,7 @@ def f(1, 2) {
     $0 + $1    
 }
 
-a = f()
+a = f 13 14
 
 outNo = 55
 
@@ -54,7 +54,7 @@ def flow (a)(b){
     a * b - $3
 }
 
-flow(3)(4)
+flow 3 4
 
 flow(3, 4){
     outNo - it
@@ -62,4 +62,33 @@ flow(3, 4){
 
 (flow 3 4)
 
-  0   1 2
+sort myListA myListB myListC
+
+sort (myListA myListB myListC)
+
+if flag || test a b {
+
+}
+
+if (test a b) != nil
+
+(if a > b)
+
+
+if max 5 7 > min 7 9 2
+
+test pa1 left > right
+
+? myf p1 p2 > 45 || test1 6 8 && print 9 4 {
+
+} else {
+    
+}
+
+for i in [1 2 3 4 5] {
+
+}
+
+myif 8 > 6 {
+    
+}
