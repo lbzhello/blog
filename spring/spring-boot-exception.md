@@ -62,6 +62,8 @@ public class AppExceptionHandlerAdvice {
 
 @ControllerAdvice 可以拦截特定的类，@ExceptionHandler 可以拦截特定的异常，因此可以更精确的配置异常处理逻辑。
 
+> @ExceptionHandler 可以在 @Controller 类中声明，此时只能处理同一个类的异常
+
 #### 3. 自定义 ErrorController bean
 
 ```java
