@@ -19,7 +19,7 @@ public class AppHandlerExceptionResolver implements HandlerExceptionResolver {
 }
 ```
 
-然后用 JavaConfig 方式配置一个 HandlerExceptionResolver
+然后配置一个 HandlerExceptionResolver
 
 ```java
 @Bean
@@ -41,6 +41,7 @@ HandlerExceptionResolver 只能捕获 @Controller 层发生的异常（包括 @C
 public class AppExceptionHandlerAdvice {
 
     // 配置拦截的错误类型
+    // 这里也可以返回 ModelAndView 导向错误视图
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> responseEntity(Exception e) {
         HttpHeaders headers = new HttpHeaders();
@@ -48,15 +49,18 @@ public class AppExceptionHandlerAdvice {
         Map<String, Object> map = new HashMap<>();
         map.put("status", 400);
         map.put("message", e.getMessage());
+        // 直接返回结果
         return new ResponseEntity<>(map, headers, HttpStatus.BAD_REQUEST);
 
     }
 }
 ```
 
-这种方式配置的异常处理由默认的 HandlerExceptionResolver 实现类 HandlerExceptionResolverComposite 调用，因此也只能捕获 @Controller 层的异常。
+这种方式配置的异常处理由 HandlerExceptionResolver 的默认实现类 HandlerExceptionResolverComposite 处理，因此也只能捕获 @Controller 层的异常。
 
-@RestControllerAdvice 可以拦截特定的类，@ExceptionHandler 可以拦截特定的异常，因此可以更精确的配置异常处理。
+@ExceptionHandler 可以返回 ModelAndView 定制异常视图。
+
+@ControllerAdvice 可以拦截特定的类，@ExceptionHandler 可以拦截特定的异常，因此可以更精确的配置异常处理逻辑。
 
 #### 3. 自定义 ErrorController bean
 
@@ -73,6 +77,7 @@ public class AppErrorController extends AbstractErrorController {
     public ResponseEntity<Map<String, Object>> error(HttpServletRequest request) {
         Map<String, Object> body = getErrorAttributes(request, false);
         HttpStatus status = getStatus(request);
+        // 返回响应体
         return new ResponseEntity<>(body, status);
     }
 
@@ -82,4 +87,11 @@ public class AppErrorController extends AbstractErrorController {
     }
 }
 ```
+
+如果没有配置 ErrorController, SpringBoot 会通过 ErrorMvcAutoConfiguration 自动配置一个，默认的实现类为 BasicErrorController。
+
+ErrorController 可以处理非 @Controller 层抛出的异常，例如常见的访问了一个不存在的路径。
+
+ErrorController 可以进行统一的错误处理，即让 HandlerExceptionResolver 返回的 ModelAndView 导向错误页面。
+
 
