@@ -1,0 +1,13 @@
+1. jps 查看 java 进程 pid
+
+2. jstat 查看内存状态
+
+jstat -gcutil [pid] [interval] [count] 显示进程 pid 的 gc 信息，每 interval 打印一次，总共显示 count 次数
+
+3. jmap 查看堆内存使用情况
+
+jmap -dump:live,format=b,file=aaa.hprof 11256 堆 dump， 通过分析各个实例占用情况可判断内存泄漏
+
+4. jstack 线程栈信息
+
+jstack [pid] 可查看线程运行信息，死锁等

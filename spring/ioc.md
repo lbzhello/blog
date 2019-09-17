@@ -14,11 +14,13 @@
 #### Java Config 方式
 
 ```java
-ApplicationContext context = new AnnotationConfigApplicationContext(JavaConfig.class);
-
-HelloWorld helloWorld = context.getBean(HelloWorld.class);
-
-helloWorld.say();
+public class AnnotationApplication {
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext(JavaConfig.class);
+        HelloBean helloBean = context.getBean(HelloBean.class);
+        helloBean.sayHello();
+    }
+}
 ```
 
 调用 AnnotationConfigApplicationContext 构造方法创建一个 ApplicationContext
