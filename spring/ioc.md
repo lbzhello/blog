@@ -1,17 +1,8 @@
 ## Annotation 创建 bean 流程
 
-## 主要接口及其功能
-
-#### ApplicationContext
-
-#### BeanDefinition
-
- bean定义接口
-1. AnnotatedBeanDefinition 额外提供 AnnotationMetadata 信息
-
 ## Bean 创建流程
 
-#### Java Config 方式
+#### Java Config 配置
 
 ```java
 public class AnnotationApplication {
@@ -23,7 +14,7 @@ public class AnnotationApplication {
 }
 ```
 
-调用 AnnotationConfigApplicationContext 构造方法创建一个 ApplicationContext
+AnnotationConfigApplicationContext 构造方法
 
 ```java
 public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
@@ -32,47 +23,60 @@ public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
     refresh();
 }
 ```
-#### 1. 调用无参构造方法
+#### 调用无参构造方法
 
 ```java
+// 此方法同时会调用父类的无参构造方法创建 DefaultListableBeanFactory
 public AnnotationConfigApplicationContext() {
+    // 自身作为作为 registry 注册中心
     this.reader = new AnnotatedBeanDefinitionReader(this);
     this.scanner = new ClassPathBeanDefinitionScanner(this);
 }
 ```
 
-它会创建一个 reder 和 scanner 用于显示注册或扫描 classpath 下符合条件的bean，将其注册到 bean 容器(BeanFactory 或 ApplicationContext)。这两个构造方法都以 this 作为参数，表示将此 AnnotationConfigApplicationContext 作为 registry (注册中心，bean definition 容器) ，AnnotationConfigApplicationContext 实现了 BeanDefinitionRegistry 接口，这个接口可以注册 beanDefinition
+**AnnotatedBeanDefinitionReader** 提供 register 方法将 bean 注册到容器中。
 
-> **AnnotatedBeanDefinitionReader** 用于 annotated bean 的显示注册。即通过调用 register 方法直接将 bean(比如 @Configuration 注解的配置类)注册到容器中。
->  
-> **ClassPathBeanDefinitionScanner** 用于扫描 classpath 下符合条件的 bean，将其注册到 bean 容器。 默认符合条件的 bean 有：  
-> - **Spring 注解的 bean**  
->   - @Component  
->   - @Repository  
->   - @Service  
->   - @Controller  
->
-> - **JavaEE 注解的 bean**
->   - @ManagedBean
->   - @Named
+此构造方法会调用 AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry) 注册一些注解相关的 post-processors, 这些 post-processors 会在 AbstractApplicationContext#refresh() 过程中起作用，主要有：
 
-#### 2. register 
+- **ConfigurationClassPostProcessor** 是一个 BeanFactoryPostProcess, 用来处理 @Configuration 相关注解，比如 @Bean, @Import, @ImportResource, @ComponentScan 等
+
+- **AutowiredAnnotationBeanPostProcessor** BeanPostProcessor 实现类，看名字也知道是用来处理自动装配的，主要是 @Autowired, @Value, @Inject, @Lookup
+
+**ClassPathBeanDefinitionScanner** 用于扫描 classpath 下符合条件的 bean，将其注册到 bean 容器。 符合条件的 bean 有： 
+
+**Spring 注解的 bean**  
+- @Component  
+- @Repository  
+- @Service  
+- @Controller  
+
+**JavaEE 注解的 bean**
+- @ManagedBean
+- @Named
+
+#### register 
 register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 方法
 
 ```java
 <T> void doRegisterBean(Class<T> annotatedClass, @Nullable Supplier<T> instanceSupplier, @Nullable String name,
         @Nullable Class<? extends Annotation>[] qualifiers, BeanDefinitionCustomizer... definitionCustomizers) {
-
+    // 创建 BeanDefinition，
+    // 从 class 中提取 AnnotationMetadata 相关信息
     AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(annotatedClass);
+
+    // 根据 @Conditional 相关注解判断是否注册 bean
     if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
         return;
     }
 
     abd.setInstanceSupplier(instanceSupplier);
+
+    // 根据 @Scope 注解确定 bean 作用域，默认为 singleton
     ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
     abd.setScope(scopeMetadata.getScopeName());
     String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
+    // 处理 @Lazy、@Primary、@DependsOn、@Role、@Description
     AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
     if (qualifiers != null) {
         for (Class<? extends Annotation> qualifier : qualifiers) {
@@ -91,23 +95,15 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
         customizer.customize(abd);
     }
 
+    // BeanDefinitionHolder 包含 bean definition 和别名
     BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
     definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+    // 注册 bean definition 到 registry
     BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 }
 ```
 
-其过程大致是：  
-1. 将 bean 封装成 AnnotatedGenericBeanDefinition，它继承自 BeanDefinition，并额外提供了 AnnotationMetadata 相关支持。下面的 bean 表示此 beanDefition。
-2. 通过 conditionEvaluator 判断是否注册 bean。它根据 @Conditional 相关注解管理 bean 创建的先后关系。
-3. 调用 scopeMetadataResolver 根据 @Scope 注解确定 bean 作用域，默认为 singleton。 
-4. 确定 beanName，如果指定名字直接返回，否则调用 beanNameGenerator 生成一个 name。
-5. 调用 AnnotationConfigUtils.processCommonDefinitionAnnotations 处理部分通用注解。比如 @Lazy、@Primary、@DependsOn、@Role、@Description。
-6. 调用 BeanDefinitionCustomizer 处理 bean
-7. 将 bean 封装成 BeanDefinitionHolder，提供 bean 名字、别名信息。
-8. 调用 BeanDefinitionReaderUtils.registerBeanDefinition 将 bean 注册到 registry，这个 registry 就是上面初始化创建的 AnnotationConfigApplicationContext，它将自身作为参数传给了 AnnotatedBeanDefinitionReader 。它会调用自身的 registerBeanDefinition 方法注册 bean。
-
-#### 3. refresh
+#### refresh
 
 ```java
 public void refresh() throws BeansException, IllegalStateException {
