@@ -119,7 +119,7 @@ $? # 显示最后命令的退出状态。0表示没有错误，其他任何值�
 $ file=/dir1/dir2/dir3/my.file.txt
 $
 $ # ${var} 变量替换, 支持模式匹配
-$ ${file}
+$ echo ${file}
 
 /dir1/dir2/dir3/my.file.txt
 
@@ -132,16 +132,16 @@ value is 7
 $ # $(()) 是 C 语言整数运算符扩展，和 $[] 相同
 $ a=2
 $ b=3
-$ $((a + b))
+$ echo $((a + b))
 
 5
 
 $ # 支持所有的 C 整数运算符
-$ $((c=a+b))
+$ echo $((c=a+b))
 
 5
 
-$ $((c++))
+$ echo $((++c))
 
 6
 

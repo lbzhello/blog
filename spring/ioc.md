@@ -8,8 +8,8 @@
 public class AnnotationApplication {
     public static void main(String[] args) {
         ApplicationContext context = new AnnotationConfigApplicationContext(JavaConfig.class);
-        HelloBean helloBean = context.getBean(HelloBean.class);
-        helloBean.sayHello();
+        HelloBean foo = context.getBean(Foo.class);
+        foo.bar();
     }
 }
 ```
