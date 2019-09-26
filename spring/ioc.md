@@ -8,7 +8,7 @@
 public class AnnotationApplication {
     public static void main(String[] args) {
         ApplicationContext context = new AnnotationConfigApplicationContext(JavaConfig.class);
-        HelloBean foo = context.getBean(Foo.class);
+        Foo foo = context.getBean(Foo.class);
         foo.bar();
     }
 }
@@ -36,11 +36,7 @@ public AnnotationConfigApplicationContext() {
 
 **AnnotatedBeanDefinitionReader** 提供 register 方法将 bean 注册到容器中。
 
-此构造方法会调用 AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry) 注册一些注解相关的 post-processors, 这些 post-processors 会在 AbstractApplicationContext#refresh() 过程中起作用，主要有：
-
-- **ConfigurationClassPostProcessor** 是一个 BeanFactoryPostProcess, 用来处理 @Configuration 相关注解，比如 @Bean, @Import, @ImportResource, @ComponentScan 等
-
-- **AutowiredAnnotationBeanPostProcessor** BeanPostProcessor 实现类，看名字也知道是用来处理自动装配的，主要是 @Autowired, @Value, @Inject, @Lookup
+此构造方法会调用 AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry) 注册基本的 post-processors, 这些 post-processors 会在 AbstractApplicationContext#refresh() 阶段起作用，关于 [post-processor](#post-processor) 下面会说到
 
 **ClassPathBeanDefinitionScanner** 用于扫描 classpath 下符合条件的 bean，将其注册到 bean 容器。 符合条件的 bean 有： 
 
@@ -202,3 +198,10 @@ org.springframework.context.annotation.internalConfigurationAnnotationProcessor 
 AnnotationConfigUtils.registerAnnotationConfigProcessors
 
 #### @Configuration 等注解支持构造参数注入
+
+<span id="post-processor"></span>
+## Post Processor
+
+- **ConfigurationClassPostProcessor** 是一个 BeanFactoryPostProcess, 用来处理 @Configuration 相关注解，比如 @Bean, @Import, @ImportResource, @ComponentScan 等
+
+- **AutowiredAnnotationBeanPostProcessor** BeanPostProcessor 实现类，看名字就知道是用来处理自动装配的，主要是 @Autowired, @Value, @Inject, @Lookup
