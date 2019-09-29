@@ -15,3 +15,7 @@
 ## Download
 
 1. [IT猫扑网](http://www.itmop.com/)
+
+## hibernate
+
+1. [深入 hibernate 的三种状态](https://www.cnblogs.com/xiaoluo501395377/p/3380270.html)

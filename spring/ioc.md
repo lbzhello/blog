@@ -23,7 +23,7 @@ public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
     refresh();
 }
 ```
-#### 调用无参构造方法
+### 调用无参构造方法
 
 ```java
 // 此方法同时会调用父类的无参构造方法创建 DefaultListableBeanFactory
@@ -36,9 +36,9 @@ public AnnotationConfigApplicationContext() {
 
 **AnnotatedBeanDefinitionReader** 提供 register 方法将 bean 注册到容器中。
 
-此构造方法会调用 AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry) 注册基本的 post-processors, 这些 post-processors 会在 AbstractApplicationContext#refresh() 阶段起作用，关于 [post-processor](#post-processor) 下面会说到
+此构造方法会调用 AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry) 将一些注解相关的 post-processors 注册到容器中, 这些 post-processors 会在后续的 AbstractApplicationContext#refresh() 阶段起作用，关于 [post-processor](#post-processor) 下面会说到
 
-**ClassPathBeanDefinitionScanner** 用于扫描 classpath 下符合条件的 bean，将其注册到 bean 容器。 符合条件的 bean 有： 
+**ClassPathBeanDefinitionScanner** 用于扫描 classpath 下符合条件的 bean，将其注册到 bean 容器。它会注册一些 AnnotationTypeFilter， 用来判定 bean 是否应该被注册到容器中。默认符合条件的 bean 有： 
 
 **Spring 注解的 bean**  
 - @Component  
@@ -50,7 +50,7 @@ public AnnotationConfigApplicationContext() {
 - @ManagedBean
 - @Named
 
-#### register 
+### register 
 register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 方法
 
 ```java
@@ -99,7 +99,7 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
 }
 ```
 
-#### refresh
+### refresh
 
 ```java
 public void refresh() throws BeansException, IllegalStateException {
@@ -200,8 +200,17 @@ AnnotationConfigUtils.registerAnnotationConfigProcessors
 #### @Configuration 等注解支持构造参数注入
 
 <span id="post-processor"></span>
+
 ## Post Processor
 
-- **ConfigurationClassPostProcessor** 是一个 BeanFactoryPostProcess, 用来处理 @Configuration 相关注解，比如 @Bean, @Import, @ImportResource, @ComponentScan 等
+- **ConfigurationClassPostProcessor** BeanFactoryPostProcess, 用来处理 @Configuration 相关注解，比如 @Bean, @Import, @ImportResource, @ComponentScan 等。当 XML 中配置 context:annotation-config 或者 context:component-scan 的时候，此类会被注册到容器中。此 post-processor 具有最高的优先级，将会最先被调用。
 
-- **AutowiredAnnotationBeanPostProcessor** BeanPostProcessor 实现类，看名字就知道是用来处理自动装配的，主要是 @Autowired, @Value, @Inject, @Lookup
+- **AutowiredAnnotationBeanPostProcessor** BeanPostProcessor 实现类，用来处理自动装配相关功能，主要是 @Autowired, @Value, @Inject, @Lookup。当 XML 中配置 context:annotation-config 或者 context:component-scan 的时候，此类会被注册到容器中。
+
+-**CommmonAnnotationBeanPostProcessor** BeanPostProcessor 实现类，处理java.annotation jsr250 相关注解，有 @PostConstruct， @PreDestroy, @Resource, @WebServiceRef。当引入 jsr250 相关包时才会被注册到容器中。
+
+- **PersistenceAnnotationBeanPostProcessor** BeanPostProcessor 实现类，支持 jpa 相关功能，引入 jpa 相关包时才会注册。
+
+- **EventListenerMethodProcessor** BeanPostProcessor 实现类, 处理 @EventListener 注解的方法。
+
+
