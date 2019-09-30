@@ -203,6 +203,14 @@ AnnotationConfigUtils.registerAnnotationConfigProcessors
 
 ## Post Processor
 
+Spring 后处理器分为两种：BeanPostProcessor 和 BeanFactoryPostProcessor。
+
+**BeanPostProcessor** 对 Bean 进行后处理，增强 Bean 的功能。
+
+**BeanFactoryPostProcessor** 对 Spring 容器本身进行后处理，增强容器的功能。
+
+Spring 中的很多核心功能功能都是通过 post-processor 来实现的。比如各种注解解析，AOP，事务等。下面是一些主要的 bean-postprocessor。
+
 - **ConfigurationClassPostProcessor** BeanFactoryPostProcess, 用来处理 @Configuration 相关注解，比如 @Bean, @Import, @ImportResource, @ComponentScan 等。当 XML 中配置 context:annotation-config 或者 context:component-scan 的时候，此类会被注册到容器中。此 post-processor 具有最高的优先级，将会最先被调用。
 
 - **AutowiredAnnotationBeanPostProcessor** BeanPostProcessor 实现类，用来处理自动装配相关功能，主要是 @Autowired, @Value, @Inject, @Lookup。当 XML 中配置 context:annotation-config 或者 context:component-scan 的时候，此类会被注册到容器中。
@@ -213,4 +221,9 @@ AnnotationConfigUtils.registerAnnotationConfigProcessors
 
 - **EventListenerMethodProcessor** BeanPostProcessor 实现类, 处理 @EventListener 注解的方法。
 
+- **AnotationAwareAspectJAutoProxyCreator** BeanPostProcessor 实现类，实现 Spring AOP 功能。它利用后置处理器机制在对象创建以后，包装对象，返回一个代理对象（增强器），代理对象执行方法利用拦截器链进行调用。
 
+- ****
+
+
+## Bean 的创建
