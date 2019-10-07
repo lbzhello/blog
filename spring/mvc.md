@@ -215,7 +215,7 @@ public class MyWebAppInitializer implements WebApplicationInitializer {
 
 SpringMVC 为 WebApplicationInitializer 提供了基本的抽象实现类
 
-![WebApplicationInitializer](/img/spring/mvc/web-application-initializer.png)
+![WebApplicationInitializer](/resources/img/spring/mvc/web-application-initializer.png)
 
 代码实现这里不再赘述，总之就是利用模版方法，调用钩子方法。子类只需提供少量的配置即可完成整个逻辑的创建。
 
@@ -297,7 +297,7 @@ public interface WebApplicationContext extends ApplicationContext {
 
 #### WebApplicationContext 类图
 
-![web](/img/spring/mvc/application-context-white.png)
+![web](/resources/img/spring/mvc/application-context-white.png)
 
 ApplicationContext 有一个抽象实现类 **AbstractApplicationContext**, 模板方法的设计模式。它有一个 refresh 方法，它定义了加载或初始化 bean 配置的基本流程。后面的实现类提供了不同的读取配置的方式，可以是 xml, annotation, web 等，并且可以通过模板方法定制自己的需求。
 
@@ -650,7 +650,7 @@ SpringMVC 将前端的所有请求都交给 DispatcherServlet 处理，他本质
 
 DispatcherServlet 类图
 
-![dispatcher-servlet](/img/spring/mvc/dispatcher-servlet-white.png)
+![dispatcher-servlet](/resources/img/spring/mvc/dispatcher-servlet-white.png)
 
 SpringMVC 将 DispatcherServlet 也当做一个 bean 来处理，所以对于一些 bean 的操作同样可以作用于 DispatcherServlet, 比如相关 *Aware 接口。
 
@@ -1001,7 +1001,7 @@ RequestMappingHandlerMapping 使用 @RequestMapping 注解将 url 和 handler �
 <span id="mvc-process"></span>
 #### SpringMVC 处理请求流程图
 
-![mvc-process](/img/spring/mvc/dispatcher-process.png)
+![mvc-process](/resources/img/spring/mvc/dispatcher-process.png)
 
 1. 客户端发出请求，会先经过 filter 过滤，通过的请求才能到达 DispatcherServlet。
 2. DispatcherServlet 通过 handlerMapping 找到请求对应的 handler，返回一个 HandlerExecutionChain 里面包含 interceptors 和 handler

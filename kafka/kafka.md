@@ -21,7 +21,7 @@
 
 数据库的处理能力是有限的，在峰值期，过多的请求落到后台，一旦超过系统的处理能力，可能会使系统挂掉。 
 
-![mq-req](/img/kafka/mq-req.png)
+![mq-req](/resources/img/kafka/mq-req.png)
 
 如上图所是，系统的处理能力是2k/s，MQ处理能力是8k/s，峰值请求5k/s，MQ的处理能力远远大于数据库，在高峰期，请求可以先积压在MQ中，系统可以根据自身的处理能力以2k/s的速度消费这些请求。这样等高峰期一过，请求可能只有100/s，系统可以很快的消费掉积压在MQ中的请求。
 
@@ -31,18 +31,18 @@
 
 如下场景，S系统与A、B、C系统紧密耦合。由于需求变动，A系统修改了相关代码，S系统也需要调整A相关的代码；过几天，C系统需要删除，S紧跟着删除C相关代码；又过了几天，需要新增D系统，S系统又要添加与D相关的代码；再过几天，程序猿疯了...  
 
-![mq-req](/img/kafka/mq-couple.png)
+![mq-req](/resources/img/kafka/mq-couple.png)
 
 这样各个系统紧密耦合，不利于维护，也不利于扩展。现在引入MQ，A系统变动，A自己修改自己的代码即可；C系统删除，直接取消订阅；D系统新增，订阅相关消息即可。
 
-![mq-req](/img/kafka/mq-decouple2.png)
+![mq-req](/resources/img/kafka/mq-decouple2.png)
 
 这样通过引入消息中间件，使各个系统都与MQ交互，从而避免它们之间的错综复杂的调用关系。
 
 <span id="kafka-cons"></span>
 ## Kafka架构  
 
-![kafka](/img/kafka/kafka-cons.png)
+![kafka](/resources/img/kafka/kafka-cons.png)
 
 #### 相关概念  
 
@@ -87,7 +87,7 @@ Message是按照topic来组织的，每个topic可以分成多个partition（对
 
 > server.properties/num.partitions 表示文件 server.properties 中的 num.partitions 配置项，下同
 
-![kafka topic](/img/kafka/topic.png)
+![kafka topic](/resources/img/kafka/topic.png)
 
 partition中的每条记录（message）包含三个属性：offset, messageSize和data。其中offset表示消息偏移量；messageSize表示消息的大小；data表示消息的具体内容。
 
@@ -95,7 +95,7 @@ partition是以文件的形式存储在文件系统中，位置由server.propert
 
 比如，topic为"page_visits"的消息，分为5个partition，其目录结构为：
 
-![partition](/img/kafka/partition.png)
+![partition](/resources/img/kafka/partition.png)
 
 > partition可能位于不同的broker上
 
@@ -112,7 +112,7 @@ partition是分段的，每个段是一个segment文件。segment的常用配置
 
 partition目录下包括了数据文件和索引文件，下图是某个partition的目录结构：
 
-![log-segment](/img/kafka/log-segment.png)
+![log-segment](/resources/img/kafka/log-segment.png)
 
 index采用稀疏存储的方式，它不会为每一条message都建立索引，而是每隔一定的字节数建立一条索引，避免索引文件占用过多的空间。缺点是没有建立索引的offset不能一次定位到message的位置，需要做一次顺序扫描，但是扫描的范围很小。
 
@@ -174,7 +174,7 @@ kafka通过"拉模式"同步消息，即follower从leader批量拉取数据来�
 
 Producer首先将消息封装进一个ProducerRecord实例中。
 
-![producer-record](/img/kafka/producer-record.png)
+![producer-record](/resources/img/kafka/producer-record.png)
 
 #### 消息路由
 1. 发送消息时如果指定了partition，则直接使用；
@@ -183,7 +183,7 @@ Producer首先将消息封装进一个ProducerRecord实例中。
 
 消息并不会立即发送，而是先进行序列化后，发送给Partitioner，也就是上面提到的hash函数，由Partitioner确定目标分区后，发送到一块内存缓冲区中（发送队列）。Producer的另一个工作线程（即Sender线程），则负责实时地从该缓冲区中提取出准备好的消息封装到一个批次内，统一发送到对应的broker中。其过程大致是这样的：
 
-![producer](/img/kafka/producer.png)
+![producer](/resources/img/kafka/producer.png)
 
 > 图片来自[123archu](https://www.jianshu.com/p/d3e963ff8b70)
 
@@ -241,7 +241,7 @@ Consumer 调用 poll(duration) 从服务器拉取消息。拉取消息的具体�
 
 若来自不同 consumer group 的多个 consumer 消费同一个 partition，则各个 consumer 之间的消费互不影响，每个 Consumer 都会有自己的 offset。
 
-![producer](/img/kafka/log-consumer.png)
+![producer](/resources/img/kafka/log-consumer.png)
 
 Consumer A 和 Consumer B 属于不同的 Consumer Group。Cosumer A 读取到 offset = 9， Consumer B 读取到 offset = 11，这个值表示下次读取的位置。也就是说 Consumer A 已经读取了 offset 为 0 ~ 8 的消息，Consumer B 已经读取了 offset 为 0 ～ 10 的消息。
 
