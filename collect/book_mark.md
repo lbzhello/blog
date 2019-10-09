@@ -30,4 +30,4 @@
 
 1. [tool.lu](https://tool.lu/)
 
-2. [linux 命令速查](https://git.io/linux)
+2. [linux 命令速查](https://wangchujiang.com/linux-command/)
