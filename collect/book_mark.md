@@ -31,3 +31,7 @@
 1. [tool.lu](https://tool.lu/)
 
 2. [linux 命令速查](https://wangchujiang.com/linux-command/)
+
+## Nginx 
+
+1. [example config](https://www.nginx.com/resources/wiki/start/topics/examples/full/)

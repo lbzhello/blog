@@ -101,6 +101,8 @@ register 方法最终会调用 AnnotatedBeanDefinitionReader 的 doRegisterBean 
 
 ### refresh
 
+AbstractApplicationContext#refresh() 可能是 ApplicationContext 中最基本的方法了，它定义了 bean 初始化的流程。
+
 ```java
 public void refresh() throws BeansException, IllegalStateException {
     synchronized (this.startupShutdownMonitor) {
@@ -135,6 +137,8 @@ public void refresh() throws BeansException, IllegalStateException {
             // Check for listener beans and register them.
             registerListeners();
 
+            // 初始化所有非 lazy-init 的 singleton bean
+            // 他会调用 DefaultListableBeanFactory#preInstantiateSingletons() 方法执行具体的逻辑
             // Instantiate all remaining (non-lazy-init) singletons.
             finishBeanFactoryInitialization(beanFactory);
 
@@ -187,6 +191,12 @@ public GenericApplicationContext() {
 11. finishBeanFactoryInitialization(beanFactory) 初始化非延迟加载的单例 bean
 12. finishRefresh() 发布相应的事件
 
+## Bean 的创建
+
+##
+
+
+### 
 -----------
 
 1. DefaultBeanDefinitionDocumentReader 解析 Xml Bean 标签定义的 Bean
