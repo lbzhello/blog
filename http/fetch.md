@@ -18,7 +18,6 @@ function bodyFetch(method, url, data) {
 function urlFetch(method, url) {
     return fetch(url, {
         method: method,
-//         body: JSON.stringify(data),
         credentials: 'include',
         headers: new Headers({
             "Content-Type": "application/json"
