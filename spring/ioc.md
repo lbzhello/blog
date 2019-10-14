@@ -203,7 +203,7 @@ bean 的创建由 AbstractApplicationContext#refresh() 的 finishBeanFactoryInit
 ```java
 void preInstantiateSingletons() {
     // 遍历 beanDefinitionNames
-    for Strign beanName : beanDefinitionNames {
+    for (Strign beanName : this.beanDefinitionNames) {
         // bean 定义的继承结构
         RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName)
         // 初始化非抽象，非单例，非 lazy-init 的 bean
@@ -272,7 +272,7 @@ T doGetBean(String name, Class<T> requiredType, Object[] args, boolean typeCheck
             // 提供一个 ObjectFactory 回调接口用于创建 bean
             // 先检查 singletonObjects 中是否存在单例，决定是否调用回调接口
             // createBean 总会创建一个新的 Bean
-            sharedInstance = getSingleton(beanName, new ObjectFactory<Object>() {
+            sharedInstance = getSingleton(beanName, () -> {
                 @Override
                 public Object getObject() throws BeansException {
                     return createBean(beanName, mbd, args)
@@ -314,20 +314,32 @@ T doGetBean(String name, Class<T> requiredType, Object[] args, boolean typeCheck
 
 Object getSingleton(String beanName) {
     // true 表示允许循环依赖
-    return getSingleton(beanName, true)
+    return getSingleton(beanName, true);
 }
 
-// 
 Object getSingleton(String beanName, boolean allowEarlyReference) {
-    // 创建完成的单例 bean 会放在 singletonObjects 中
-    Object singletonObject = this.singletonObjects.get(beanName)
-    if singletonObject == null && isSingletonCurrentlyInCreation(beanName) {
-        singletonObject = this.earlySingletonObjects.get(beanName)
-        if singletonObject == null && allowEarlyReference {
-            singletonObject = this.singletonFactories.get(beanName)
-        }
-    }
-    return singletonObject
+    @Nullable
+	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+        // 从 singleton 缓存里面查找
+		Object singletonObject = this.singletonObjects.get(beanName);
+		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
+			synchronized (this.singletonObjects) {
+                // 从 earlySingletonObjects 查找
+				singletonObject = this.earlySingletonObjects.get(beanName);
+				if (singletonObject == null && allowEarlyReference) {
+                    // 先从 singletonFactories 获取，并将其移进 earlySingletonObjects
+                    // 如果允许循环引用， 则 bean 会在 populateBean 之前先放进 singletonFactories 中
+					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
+					if (singletonFactory != null) {
+						singletonObject = singletonFactory.getObject();
+						this.earlySingletonObjects.put(beanName, singletonObject);
+						this.singletonFactories.remove(beanName);
+					}
+				}
+			}
+		}
+		return singletonObject;
+	}
 }
 ```
 
@@ -336,20 +348,70 @@ Object getSingleton(String beanName, boolean allowEarlyReference) {
 createBean 每次都会创建一个新的实例, singleton 和 prototype 类型的 bean 都由此方法创建，区别在于 singleton 会缓存初次创建的 bean 实例。 (见上文)
 
 ```java
-Object  createBean(String beanName, RootBeanDefinition mbd, Object[] args) throws BeanCreatingException {
-    RootBeanDefinition mbdToUse = mbd
+
+Object createBean(String beanName, RootBeanDefinition mbd, @Nullable Object[] args)
+        throws BeanCreationException {
+
+    RootBeanDefinition mbdToUse = mbd;
 
     // 确保 class 已经被加载
-    Class<?> resolvedClass = resolveBean(mbd, beanName)
+    Class<?> resolvedClass = resolveBean(mbd, beanName);
 
     /**... ...**/
 
-    Object beanInstance = doCreateBean(beanName, mbdToUse, args)
-    return beanInstance
+    Object beanInstance = doCreateBean(beanName, mbdToUse, args);
+
+    return beanInstance;
 }
 
-Object doCreateBean(String beanName, RootBeanDefinition mbd, Object[] args) throws BeanCreationException {
+protected Object doCreateBean(final String beanName, final RootBeanDefinition mbd, final @Nullable Object[] args) {
+    BeanWrapper instanceWrapper = null;
+    if (mbd.isSingleton()) {
+        // 从 FactoryBean 缓存中获取
+        instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
+    }
+    if (instanceWrapper == null) {
+        // 创建 bean 实例
+        instanceWrapper = createBeanInstance(beanName, mbd, args);
+    }
 
+    final Object bean = instanceWrapper.getWrappedInstance();
+    
+    /**... ...**/
+
+    // 是单例类，正在创建（创建完成肯定不存在循环依赖了），允许循环依赖
+    // 则暴露 bean 的早期引用，即放进 singletonFactories 中
+    // 可以通过前面的 getSingleton(beanName) 拿到这个早期引用
+    boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
+				isSingletonCurrentlyInCreation(beanName));
+    if (earlySingletonExposure) {
+        addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
+    }
+
+    Object exposedObject = bean;
+
+    // 设置 bean 的属性，即依赖注入
+	populateBean(beanName, mbd, instanceWrapper);
+
+    // 相关接口回调，aware -> init-method -> post-processor 顺序
+    exposedObject = initializeBean(beanName, exposedObject, mbd);
+
+    /**... 循环引用处理 ...**/
+
+    return exposedObject;
+}
+
+protected Object initializeBean(final String beanName, final Object bean, @Nullable RootBeanDefinition mbd) {
+    Object wrappedBean = bean;
+    // aware 接口回调
+    invokeAwareMethods(beanName, bean);
+    
+    //  InitializingBean -> @PostConstruct -> init-method
+    invokeInitMethods(beanName, wrappedBean, mbd);
+
+    // 这里调用 bean post processor
+    wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
+    return wrappedBean;
 }
 
 ```

@@ -32,7 +32,9 @@ public class CorsWebFilter implements Filter {
 @Configuration
 // @ServletComponentScan 注解仅支持嵌入式容器
 @ServletComponentScan(basePackages = {"xyz.lius.web.filter"})
-public class WebServletConfig {}
+public class WebServletConfig {
+    
+}
 ```
 
 > 同样可以通过 @WebServlet, @WebListener 配置 servlet 和 listener. 
