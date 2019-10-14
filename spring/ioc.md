@@ -137,8 +137,8 @@ public void refresh() throws BeansException, IllegalStateException {
             // Check for listener beans and register them.
             registerListeners();
 
-            // 初始化所有非 lazy-init 的 singleton bean
-            // 他会调用 DefaultListableBeanFactory#preInstantiateSingletons() 方法执行具体的逻辑
+            // ------ 在此之前容器中只存在 bean definition, singleton 在下一步实例化 ------//
+
             // Instantiate all remaining (non-lazy-init) singletons.
             finishBeanFactoryInitialization(beanFactory);
 
@@ -193,10 +193,167 @@ public GenericApplicationContext() {
 
 ## Bean 的创建
 
-##
+bean 的创建由 AbstractApplicationContext#refresh() 的 finishBeanFactoryInitialization 方法完成，它会初始化所有非 lazy-init 的 singleton bean。
 
+实际的创建过程会委托给 DefaultListableBeanFactory 来完成。
 
-### 
+下面先捋一捋各个步骤都做了什么
+
+### DefaultListableBeanFactory#preInstantiateSingletons() 
+```java
+void preInstantiateSingletons() {
+    // 遍历 beanDefinitionNames
+    for Strign beanName : beanDefinitionNames {
+        // bean 定义的继承结构
+        RootBeanDefinition bd = getMergedLocalBeanDefinition(beanName)
+        // 初始化非抽象，非单例，非 lazy-init 的 bean
+        if !bd.isAbstract() && !bd.isSingleton && !bd.isLazyInit() {
+            // FactoryBean 处理
+            if isFactoryBean(bd)
+                someMethod()
+                getBean(beanName)
+            else
+                getBean(beanName)
+        }
+    }
+}
+```
+
+### AbstractBeanFactory#getBean(String name)
+
+```java
+Object getBean(String name) {
+    return doGetBean(name, null, null, false)
+}
+
+T doGetBean(String name, Class<T> requiredType, Object[] args, boolean typeCheckOnly) {
+    // 获取 bean 名字，处理 FactoryBean (以 '&' 开头) 
+    String beanName = transformedBeanName(name)
+    // bean 已经被创建或者出现循环依赖则返回
+    Object sharedInstance = getSingleton(beanName)
+    // args == null 表示初次实例化，若 sharedInstance == null 表示出现了循环依赖
+    // 非初始化阶段 args 可能为 []，但不是 null 
+    if sharedInstance == null && args == null {
+        bean = getObjectForBeanInstance(sharedInstance, name, beanName, null)
+    } else {
+        // prototype 不存在循环引用
+        if isPrototypeCurrentlyInCreating(beanName) {
+            throw new BeanCurrentlyInCreatingException(beanName)
+        }
+
+        // 从父容器中递归查找 beanName
+        BeanFactory parentBeanFactory = getParentBeanFactory()
+        if parentBeanFactory != null && !containsBeanDefinition(beanName) { // 当前容器不存在 bean
+            String nameToLookup = originalBeanName(name)
+            if args != null {
+                return (T) parentBeanFactory.getBean(nameToLookup, args)
+            } else {
+                return parentBeanFactory.getBean(nameToLookup, requiredType)
+            }
+        }
+
+        // bean 定义的继承结构
+        RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName)
+
+        // 先初始化 @DependsOn 依赖的 bean（注意，不是属性依赖！）
+        String[] dependsOn = mbd.getDependsOn()
+        for (String dep : dependsOn) {
+            // 不允许循环 depends-on
+            if (isDependent(beanName, dep)) {
+                throw new Exception();
+            }
+            // 注册 depends-on 关系到 dependentBeanMap，用于判断是否存在循环 depends-on
+            registerDependentBean(dep, beanName)
+            // 递归
+            getBean(dep)
+        }
+
+        if mbd.isSingleton() { // 单例类
+            // 提供一个 ObjectFactory 回调接口用于创建 bean
+            // 先检查 singletonObjects 中是否存在单例，决定是否调用回调接口
+            // createBean 总会创建一个新的 Bean
+            sharedInstance = getSingleton(beanName, new ObjectFactory<Object>() {
+                @Override
+                public Object getObject() throws BeansException {
+                    return createBean(beanName, mbd, args)
+                }
+            })
+            // 返回 bean 实例，或者 FactoryBean 创建的对象
+            bean = getObjectsForBeanInstance(sharedInstance, name, beanName, mbd)
+        } else if mbd.isPrototype() { // 创建新 prototype, 注意和 singleton 的区别
+            beforePrototypeCreation(beanName)
+            Object prototypeInstance = createBean(beanName, mbd, args)
+            afterPrototypeCreation(beanName)
+            bean = getObjectsForBeanInstance(prototypeInstance, name, beanName, mbd)
+        } else { // 其他作用域
+            // 获取作用域处理器
+            String scopeName = mbd.getScope()
+            Scope scope = this.scopes.get(scopeName)
+
+            // 这个和上面 singleton 处理类似，提供了 ObjectFactory 回调接口
+            // scope 的实现类可以自由决定是否调用 ObjectFactory 创建新的 bean
+            Object scopedInstance = scope.get(beanName, new ObjectFactory<Object>() {
+                @Override
+                public Object getObject() throws BeansException {
+                    beforePrototypeCreation(beanName)
+                    try {
+                        return createBean(beanName, mbd, args)
+                    } finally {
+                        afterPrototypeCreation(beanName)
+                    }
+                }
+            })
+            bean = getObjectsForBeanInstance(scopedInstance, name, beanName, mbd)
+        }
+
+        /**... 相关类型检查 ...**/
+
+        return (T) bean
+    }
+}
+
+Object getSingleton(String beanName) {
+    // true 表示允许循环依赖
+    return getSingleton(beanName, true)
+}
+
+// 
+Object getSingleton(String beanName, boolean allowEarlyReference) {
+    // 创建完成的单例 bean 会放在 singletonObjects 中
+    Object singletonObject = this.singletonObjects.get(beanName)
+    if singletonObject == null && isSingletonCurrentlyInCreation(beanName) {
+        singletonObject = this.earlySingletonObjects.get(beanName)
+        if singletonObject == null && allowEarlyReference {
+            singletonObject = this.singletonFactories.get(beanName)
+        }
+    }
+    return singletonObject
+}
+```
+
+### AbstractAutoWireCapableBeanFactory#createBean(String beanName, RootBeanDefinition mbd, Object[] args)
+
+createBean 每次都会创建一个新的实例, singleton 和 prototype 类型的 bean 都由此方法创建，区别在于 singleton 会缓存初次创建的 bean 实例。 (见上文)
+
+```java
+Object  createBean(String beanName, RootBeanDefinition mbd, Object[] args) throws BeanCreatingException {
+    RootBeanDefinition mbdToUse = mbd
+
+    // 确保 class 已经被加载
+    Class<?> resolvedClass = resolveBean(mbd, beanName)
+
+    /**... ...**/
+
+    Object beanInstance = doCreateBean(beanName, mbdToUse, args)
+    return beanInstance
+}
+
+Object doCreateBean(String beanName, RootBeanDefinition mbd, Object[] args) throws BeanCreationException {
+
+}
+
+```
+
 -----------
 
 1. DefaultBeanDefinitionDocumentReader 解析 Xml Bean 标签定义的 Bean
