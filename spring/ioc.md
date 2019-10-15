@@ -405,11 +405,14 @@ protected Object initializeBean(final String beanName, final Object bean, @Nulla
     Object wrappedBean = bean;
     // aware 接口回调
     invokeAwareMethods(beanName, bean);
+
+    // 这里调用 bean post processor 前置处理; @PostConstruct 调用（InitDestroyAnnotationBeanPostProcessor）
+    wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
     
-    //  InitializingBean -> @PostConstruct -> init-method
+    //  InitializingBean -> init-method
     invokeInitMethods(beanName, wrappedBean, mbd);
 
-    // 这里调用 bean post processor
+    // 这里调用 bean post processor 后置处理
     wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
     return wrappedBean;
 }
