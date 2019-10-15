@@ -5,6 +5,7 @@
 #### 1. 实现 HandlerExceptionResolver
 
 ```java
+@Conponent
 public class AppHandlerExceptionResolver implements HandlerExceptionResolver {
     @Override
     public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
@@ -19,16 +20,7 @@ public class AppHandlerExceptionResolver implements HandlerExceptionResolver {
 }
 ```
 
-然后配置一个 HandlerExceptionResolver
-
-```java
-@Bean
-public AppHandlerExceptionResolver appHandlerExceptionResolver() {
-    return new AppHandlerExceptionResolver();
-}
-```
-
-HandlerExceptionResolver 的实现类会 catch 到 @Controller 方法执行时发生的异常，处理后返回 ModelAndView 作为结果视图，因此可以通过它来定制异常视图。
+HandlerExceptionResolver 的实现类能捕获到 @Controller 方法执行时发生的异常，处理后返回 ModelAndView 作为结果视图，因此可以通过它来定制异常视图。
 
 HandlerExceptionResolver 只能捕获 @Controller 层发生的异常（包括 @Controller 调用 @Service 发生的异常），其他地方的异常，比如访问了一个不存在的路径，不会被 HandlerExceptionResolver 捕获，此时会跳到 ErrorController 处理， 下面会说到。
 
@@ -36,7 +28,7 @@ HandlerExceptionResolver 只能捕获 @Controller 层发生的异常（包括 @C
 
 ```java
 // 可以配置拦截指定的类或者包等
-// @RestControllerAdvice 使 @ExceptionHandler 注解的方法默认具有 @ResponseBody 注解
+// @RestControllerAdvice 相当于 @ExceptionHandler + @ResponseBody
 @RestControllerAdvice(basePackageClasses = HelloWorldController.class)
 public class AppExceptionHandlerAdvice {
 
@@ -58,13 +50,15 @@ public class AppExceptionHandlerAdvice {
 
 这种方式配置的异常处理由 HandlerExceptionResolver 的默认实现类 HandlerExceptionResolverComposite 处理，因此也只能捕获 @Controller 层的异常。
 
-@ExceptionHandler 可以返回 ModelAndView 定制异常视图。
+@ExceptionHandler 可以返回 ModelAndView 导向异常视图。
 
 @ControllerAdvice 可以拦截特定的类，@ExceptionHandler 可以拦截特定的异常，因此可以更精确的配置异常处理逻辑。
 
 > @ExceptionHandler 可以在 @Controller 类中声明，此时只能处理同一个类的异常
 
-#### 3. 自定义 ErrorController bean
+#### 3. 实现 ErrorController 接口
+
+这里为了方便，直接继承 AbstractErrorController
 
 ```java
 @RestController
