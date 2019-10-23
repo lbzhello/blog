@@ -122,7 +122,7 @@ index采用稀疏存储的方式，它不会为每一条message都建立索引�
 
 #### Partition and Replica
 
-一个topic物理上分为多个partition，位于不同的broker上。如果没有 replica，一旦broker宕机，其上所有的patition将不可用。
+一个topic物理上分为多个partition，位于不同的broker上。如果没有 replica, 一旦broker宕机，其上所有的patition将不可用。
 
 每个partition可以有多个replica(对应server.properties/default.replication.factor)，分配到不同的broker上，其中有一个leader负责读写，处理来自producer和consumer的请求；其它作为follower从leader pull消息，保持与leader的同步。
 
@@ -201,9 +201,9 @@ Producer首先将消息封装进一个ProducerRecord实例中。
 
 #### 如何将Partition分配给Consumer
 
-生产过程中broker要分配partition，消费过程这里，也要分配partition给消费者。类似broker中选了一个controller出来，消费也要从broker中选一个coordinator，用于分配partition。
+生产过程中 broker 要分配 partition，消费过程这里，也要分配 partition 给消费者。类似 broker 中选了一个 controller 出来，消费也要从 broker 中选一个 coordinator，用于分配 partition。
 
-当 partition 或 consumer 数量发生变化时，比如 增加 consumer, 减少 consumer(主动或被动)，增加 partition，都会进行 rebalance。
+当 partition 或 consumer 数量发生变化时，比如增加 consumer, 减少 consumer(主动或被动)，增加 partition，都会进行 rebalance。
 
 其过程如下：
 
