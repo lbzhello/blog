@@ -122,7 +122,7 @@ index采用稀疏存储的方式，它不会为每一条message都建立索引�
 
 #### Partition and Replica
 
-一个topic物理上分为多个partition，位于不同的broker上。如果没有 replica，一旦broker宕机，其上所有的patition将不可用。
+一个topic物理上分为多个partition，位于不同的broker上。如果没有 replica, 一旦broker宕机，其上所有的patition将不可用。
 
 每个partition可以有多个replica(对应server.properties/default.replication.factor)，分配到不同的broker上，其中有一个leader负责读写，处理来自producer和consumer的请求；其它作为follower从leader pull消息，保持与leader的同步。
 

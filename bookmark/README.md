@@ -44,3 +44,7 @@
 ## BTrace Arthas
 
 ## [牛客](https://www.nowcoder.com/discuss?type=2)
+
+## java
+
+[Java 各种框架、知识点导航](https://blog.csdn.net/weixin_39668878/article/details/89207603)
