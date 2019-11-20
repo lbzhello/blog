@@ -28,13 +28,13 @@
 
 ## MySQL
 
-- [基本语法](mysql/sql.md)
+- [基本语法](database/mysql/sql.md)
 
-- [异常记录](mysql/error.md)
+- [异常记录](database/mysql/error.md)
 
-- [MySql 基础](mysql/mysql.md)
+- [MySql 基础](database/mysql/mysql.md)
 
-- [MySQL 慢查询分析](mysql/slow_query.md)
+- [MySQL 慢查询分析](database/mysql/slow_query.md)
 
 ## Linux
 
