@@ -6,6 +6,10 @@ UninstallTool
 2. 定位到 计算机\HKEY_CLASSES_ROOT\Directory\Background\shell\Git Bash Here\command, 没有的话新建一个
 3. 修改默认值定位到程序执行文件比如 D:\Git\git-bash.exe
 
+## 其他右键菜单删除
+1. 打开注册表 regedit
+2. 点击计算机 -> 编辑 -> 查找 -> 修改或删除
+
 ## 图标缺失
 右键属性 -> 快捷方式 -> 更改图标
 
