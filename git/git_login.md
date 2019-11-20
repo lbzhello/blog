@@ -1,6 +1,6 @@
 Git 设置用户名，密码，密钥，以后不用每次 push 是都输入用户名和密码
 
-## 设置 username, email
+## 方式一 设置 username, email
 ```
 git config --global user.name "foo"
 
@@ -10,7 +10,7 @@ git config --global user.email "foo@example.com"
 git config --global credential.helper store
 ```
 
-## 生成 SSH 密钥
+## 方式二 生成 SSH 密钥
 
 密钥存储在 ~/.ssh 目录下
 

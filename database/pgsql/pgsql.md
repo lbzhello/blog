@@ -1,3 +1,5 @@
+**[PostgreSQL 官方文档中文翻译](https://www.runoob.com/manual/PostgreSQL/)**
+
 #### pgAdmin
 
 postgres 自带的 web 管理页面
@@ -9,6 +11,9 @@ postgres 命令行 shell
 ### 常用命令
 
 ```shell
+# 查看SQL命令的解释，比如\h select。
+\h
+
 # 显示所有命令
 \?
 
@@ -18,14 +23,92 @@ postgres 命令行 shell
 # 选择 somedb 数据库
 \c somedb;
 
-# 查看表定义
+# 列出当前数据库所有表，视图，序列
+\d
+
+# 列出一张表格的结构
 \d sometable;
 
-# 列出所有表
-\dt
+# 列出(scheme 中)所有表
+\dt [scheme]
 
-# 列出所有索引
-\di
+# 列出（匹配的）所有用户
+\du [pattern]
+```
+
+## 数据类型
+#### 1. 基础类型
+#### 2. 组合类型
+#### 3. 域 类型和限制的组合
+#### 4. 伪类型
+
+| 名字 | 描述 |
+|:----|:-----| 
+| any | 表示一个函数可以接受任意输入数据类型 |
+| anyelement | 表示一个函数可以接受任意数据类型（参见第 37.2.5 节） |
+| anyarray | 表示一个函数可以接受任意数组数据类型（参见第 37.2.5 节）
+| anynonarray | 表示一个函数可以接受任意非数组数据类型（参见第 37.2.5 节） |
+| anyenum | 表示一个函数可以接受任意枚举数据类型（参见第 37.2.5 节和第 8.7 节） |
+| anyrange | 表示一个函数可以接受任意范围数据类型（参见第 37.2.5 节和第 8.17 节） |
+| cstring | 表示一个函数接受或者返回一个非空结尾的C字符串 |
+| internal | 表示一个函数接受或返回一个服务器内部数据类型 |
+| language_handler | 一个被声明为返回language_handler的过程语言调用处理器 |
+| fdw_handler | 一个被声明为返回fdw_handler的外部数据包装器处理器 |
+| index_am_handler | 一个被声明为返回index_am_handler索引访问方法处理器 |
+| tsm_handler | 一个被声明为返回tsm_handler的表采样方法处理器 |
+| record | 标识一个接收或者返回一个未指定的行类型的函数 |
+| trigger | 一个被声明为返回trigger的触发器函数 |
+| event_trigger | 一个被声明为返回event_trigger的事件触发器函数 |
+| pg_ddl_command | 标识一种对事件触发器可用的 DDL 命令的表达 |
+| void | 表示一个函数不返回值 |
+| unknown | 标识尚未解析的类型，例如，未装饰的字符串文字 |
+| opaque | 一种已被废弃的类型名称，以前它用于实现大多数以上的目的 |
+
+#### 5. 多态类型
+
+### 条件表达式
+
+```sql
+-- case
+CASE expression
+    WHEN value THEN result
+    [WHEN ...]
+    [ELSE result]
+END
+
+-- case when
+CASE WHEN condition THEN result
+     [WHEN ...]
+     [ELSE result]
+END
+
+-- 示例
+SELECT a,
+       CASE a WHEN 1 THEN 'one'
+              WHEN 2 THEN 'two'
+              ELSE 'other'
+       END
+FROM test;
+
+SELECT a,
+       CASE WHEN a=1 THEN 'one'
+            WHEN a=2 THEN 'two'
+            ELSE 'other'
+       END
+FROM test;
+
+-- if 条件表达式
+IF ... THEN ... END IF
+IF ... THEN ... ELSE ... END IF
+IF ... THEN ... ELSIF ... THEN ... ELSE ... END IF
+
+-- COALESCE 返回第一个非空表达式的值
+COALESCE(value [, ...])
+
+-- NULLIF 相等时返回 null
+-- value1 == value2 ? null : value1
+NULLIF(value1, value2)
+
 ```
 
 ## 函数
