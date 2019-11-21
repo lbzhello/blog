@@ -78,10 +78,10 @@ $ ssh host
 $ ssh -p 2017 user@host
 ```
 
-#### ~/.ssh 中有四个文件
-1. id_rsa：保存私钥
-2. id_rsa.pub：保存公钥
-3. authorized_keys：保存已授权的客户端公钥
-4. known_hosts：保存已认证的远程主机ID（关于known_hosts详情，见文末更新内容）
+> ~/.ssh 中有四个文件
+> * id_rsa：保存私钥
+> * id_rsa.pub：保存公钥
+> * authorized_keys：保存已授权的客户端公钥
+> * known_hosts：保存已认证的远程主机ID（关于known_hosts详情，见文末更新内容）
 
 **参考： [图解SSH原理](https://www.cnblogs.com/diffx/p/9553587.html)**
