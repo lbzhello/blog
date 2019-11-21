@@ -15,3 +15,7 @@ UninstallTool
 
 ## git 出现 SSL certificate problem: unable to get local issuer certificate
 git config --global http.sslVerify false
+
+## gpedit 本地组策略
+
+## regedit 注册表

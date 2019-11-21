@@ -16,6 +16,7 @@ git config --global credential.helper store
 
 1. 生存密钥和公钥。命令执行完后，在 ~/.ssh 目录下会看到 id_rsa（私钥）、id_rsa.pub（公钥） 文件。
 ```sh
+# -t 表示类型选项
 ssh-keygen -t rsa -C "foo@example.com"
 ```
 2. 复制 id_rsa.pub 里的内容到 Github -> Settings -> SSH and GPG Keys
