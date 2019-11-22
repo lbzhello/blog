@@ -11,7 +11,6 @@ if len(sys.argv) == 2:
 # 多个参数自动拼接，不用加引号了
 elif len(sys.argv) > 2:
     msg = ' '.join(sys.argv[1:])
-        
 
 ad = 'git add .'
 co = 'git commit -am "{}"'.format(msg)
