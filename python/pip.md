@@ -22,7 +22,7 @@ pip install scrapy -i https://pypi.tuna.tsinghua.edu.cn/simple
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
-3. **Windows:** 家目录（C:\Users\username）下修改/创建一个 pip/pip.ini 文件，内容如下
+3. **Windows:** 家目录（C:\Users\USERNAME）下修改/创建一个 pip/pip.ini 文件，内容如下
 ```conf
 [global]
 index-url = https://pypi.tuna.tsinghua.edu.cn/simple

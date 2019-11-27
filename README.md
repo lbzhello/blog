@@ -24,7 +24,7 @@
 
 ## Kafka
 
-- [图解 Kafka](kafka/README.md)
+- [图解 Kafka](kafka/kafka.md)
 
 ## MySQL
 
