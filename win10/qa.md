@@ -19,3 +19,13 @@ git config --global http.sslVerify false
 ## gpedit 本地组策略
 
 ## regedit 注册表
+
+## curl
+Linux 下的一个常用工具 curl 非常好用，但是在 powershell 里面却被占用了（作为 Invoke-WebRequest 的别名）
+【解决】：删除 curl 别名，反正也基本用不到，或者说完全可以被真正的 curl 取代。
+
+```sh
+remove-item alias:\curl
+```
+
+然后正常安装 [curl：https://curl.haxx.se/windows](https://curl.haxx.se/windows/) 设置环境变量就可以了。
