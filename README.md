@@ -1,5 +1,3 @@
-## 万水千山总是情，给个关注行不行 d^_^b
-
 ## Java
 
 - [多线程](java/concurrency.md)
