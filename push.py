@@ -8,7 +8,7 @@ msg = 'update'
 # 第一个参数为消息内容
 if len(sys.argv) == 2:
     msg = sys.argv[1]
-# 多个参数自动拼接，不用加引号了
+# 多个参数作为消息自动拼接，不用加引号了
 elif len(sys.argv) > 2:
     msg = ' '.join(sys.argv[1:])
 
@@ -19,4 +19,3 @@ pu = 'git push origin master'
 os.system(ad)
 os.system(co)
 os.system(pu)
-
