@@ -35,3 +35,11 @@ del alias:curl
 ```
 
 然后正常安装 [curl：https://curl.haxx.se/windows](https://curl.haxx.se/windows/) 设置环境变量就可以了。
+
+## 端口被占用
+
+```sh
+1. netstat -ano | findstr "1099" 
+2. tasklist | findstr "9280" 
+3. taskkill /f /t /im java.exe
+```
