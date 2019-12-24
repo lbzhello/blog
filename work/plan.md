@@ -27,4 +27,8 @@ from 运行在主线程，create 可以通过 subscribeOn 设置执行线程
 
 4. EventBus Scheduler cron
 5. logback 使用
-6. from
+6. lombok
+7. 单元测试
+
+2019-12-24
+1. 通过异常表示错误，而不是通过返回错误信息
