@@ -85,6 +85,9 @@ public void fooTest() {
 #### @AllArgsConstructor 
 注解在类，生成包含类中所有字段的构造方法
 
+#### @Slf4j 
+注解在类，生成 log 变量，相当于 ```java private static final Logger log = LoggerFactory.getLogger(UserController.class);```
+
 ## 原理
 自动生成的代码到底是如何产生的呢？ 核心之处就是对于注解的解析上。JDK5引入了注解的同时，也提供了两种解析方式。
 
@@ -101,3 +104,8 @@ Lombok 本质上就是一个实现了“JSR 269 API”的程序。在使用 java
 2. 运行过程中调用实现了“JSR 269 API”的Lombok程序
 3. 此时 Lombok 就对第一步骤得到的AST进行处理，找到 @Data 注解所在类对应的语法树（AST），然后修改该语法树（AST），增加 getter 和 setter 方法定义的相应树节点
 4. javac使用修改后的抽象语法树（AST）生成字节码文件，即给 class 增加新的节点（代码块）
+
+----
+
+**【参考】**
+1. [Lombok简介、使用、工作原理、优缺点](https://blog.csdn.net/ThinkWon/article/details/101392808)
