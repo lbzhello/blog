@@ -30,7 +30,7 @@
 
 1. [tool.lu](https://tool.lu/)
 
-2. [linux 命令速查](https://wangchujiang.com/linux-command/)
+2. [linux 命令速查](https://jaywcjlove.gitee.io/linux-command/)
 
 ## Nginx 
 
