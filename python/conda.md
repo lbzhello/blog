@@ -1,6 +1,7 @@
 ## 清华镜像
 
 [Anaconda 镜像使用帮助](https://mirrors.tuna.tsinghua.edu.cn/help/anaconda/)
+[Miniconda 下载](https://mirrors.tuna.tsinghua.edu.cn/anaconda/miniconda/)
 
 ## 常用命令
 
