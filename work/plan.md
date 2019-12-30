@@ -32,3 +32,20 @@ from 运行在主线程，create 可以通过 subscribeOn 设置执行线程
 
 2019-12-24
 1. 通过异常表示错误，而不是通过返回错误信息
+
+2019-12-28
+1. DataFlow, DataStream, DataSet
+2. macro 
+macro, $0 分开，e.g. a, b, $0, $1 问题，输入 a, b 返回 lambda ?  ×
+全部作为 参数
+def max(int, int) -> int {
+    
+}
+
+3. stream
+arr.map(it -> sout(it)).filter(it -> it > 0).forEach(it -> print(it))
+
+// 避免函数嵌套调用
+arr >> sout(it) >> it > 0 >> print(it)
+
+a = getAll(qo) >> {x, y -> findById(x, y)} >> it.getName() >> sout(it)
