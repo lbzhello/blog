@@ -24,6 +24,7 @@ todo
 3. rxjava/reactor 各个操作符作用, 
 create 中的线程不会被 onErrorContinue 捕获
 from 运行在主线程，create 可以通过 subscribeOn 设置执行线程
+groupby 操作统统 next发射数据源优点，避免不必要的循环
 
 4. EventBus Scheduler cron
 5. logback 使用
