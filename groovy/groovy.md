@@ -147,6 +147,59 @@ println sout
 println serr
 ```
 
+## Collections
+
+```groovy
+''' list '''
+// ArrayList
+def list = [5, 6, 7, 8] // ArrayList
+// LinkedList
+def list2 = [5, 6, 7, 8] as LinkedList
+// array
+def list3 = [5, 6, 7, 8] as int[]
+// 直接创建
+def list4 = new LinkedList<String>()
+list4.add(2) // 泛型没有作用
+
+// 获取 list 长度
+list.size() // 5
+
+// 获取 list 元素 
+def list = [5, 6, 7, 8]
+list.get(0) // 5
+list[0] // 5
+list[-1] // 8
+
+// 修改 list 元素
+list.set(0, 10)
+list[0] = 10
+
+// 添加
+list.add(9)
+
+assert ![] // [] 计算为 false
+
+''' 迭代 '''
+// 推荐使用 Flux，减少学习成本
+def list = [1, 2, 4, 8]
+
+// 迭代，返回自身
+// Flux.fromIterable(list).subscribe
+list.each {
+    println it
+}
+
+// 带索引迭代
+list.eachWithIndex { elem, i ->
+    println "$i:$elem"
+}
+
+
+
+
+
+```
+
 
 ## 参考
-[The Groovy Development Kit](http://www.groovy-lang.org/groovy-dev-kit.html#_negation)
+[The Groovy Development Kit](http://www.groovy-lang.org/groovy-dev-kit.html)
