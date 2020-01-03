@@ -179,9 +179,13 @@ list.add(9)
 
 assert ![] // [] 计算为 false
 
-''' 迭代 '''
+```
+
+### 迭代
+
+```groovy
 // 推荐使用 Flux，减少学习成本
-def list = [1, 2, 4, 8]
+def list = [1, 2, 3, 4]
 
 // 迭代，返回自身
 // Flux.fromIterable(list).subscribe
@@ -194,8 +198,73 @@ list.eachWithIndex { elem, i ->
     println "$i:$elem"
 }
 
+// 收集所有元素到一个新的列表 
+// [2, 4, 6, 8]
+list.collect {
+    it*2
+}
 
+// 找到第一个符合的元素
+// 2
+list.find {
+    it > 1
+}
 
+// 返回所有符合条件的元素, 同 filter
+// [2, 3, 4]
+list.findAll {
+    it > 1
+}
+
+// 返回元素索引，-1 表示元素不在集合中
+// 1
+list.indexOf(2)
+
+// 所有元素都匹配则返回 true，同 Flux.all/Stream.allMatch
+// true
+list.every {
+    it < 5
+}
+
+// 任意一个元素匹配则返回 true, 同 Flux.any/Stream.anyMatch
+// true
+list.any {
+    it < 2
+}
+
+// 求和
+// 10
+list.sum()
+// 7
+['abc', 'a', 'xyz'].sum {
+    it.length()
+}
+
+// 连接
+// abc-a-xyz
+['abc', 'a', 'xyz'].join('-')
+
+list = [1, 2, 3, 4]
+
+// 同 reduce
+// 11
+list.inject(1) {x, y -> 
+    x + y
+}
+
+// 比较
+list.min() // 1
+list.max() // 4
+
+list = ['abc', 'a', 'xyz']
+list.min { it.length() } // 1
+list.max { it.length() } // 3
+
+// 支持传入一个 Comparator
+Comparator mc2 = { a, b -> a == b ? 0 : (Math.abs(a) < Math.abs(b)) ? -1 : 1 }
+
+assert list.max(mc2) == -13
+assert list.min(mc2) == -1
 
 
 ```
