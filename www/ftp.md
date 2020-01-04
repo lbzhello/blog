@@ -1,0 +1,1 @@
+[用FTP客户端实现主机和虚拟机之间文件的传输（方法1）](https://blog.csdn.net/taw19960426/article/details/92637249)
