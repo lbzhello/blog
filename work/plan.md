@@ -50,3 +50,25 @@ arr.map(it -> sout(it)).filter(it -> it > 0).forEach(it -> print(it))
 arr >> sout(it) >> it > 0 >> print(it)
 
 a = getAll(qo) >> {x, y -> findById(x, y)} >> it.getName() >> sout(it)
+
+
+2020-01-06
+1. {name:'lbz' age:22 x, y -> x + y} x
+2. {x, y -> name:'lbz' age:22 x + y} √
+3. x, y -> {name: 'lbz' age:22 x + y}
+4. int, int -> int {} x 返回位置复发确定
+5. type
+## func
+let lbd = type int, int -> int {x, y ->
+
+}
+
+def f(int, int) -> int {
+    
+} 
+
+## var
+let v = Map<int, int>()
+let i = int(3)
+
+
