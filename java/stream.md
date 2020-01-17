@@ -1,0 +1,1 @@
+[Java 8 Stream 的终极技巧——Collectors 操作](https://segmentfault.com/a/1190000021471693)

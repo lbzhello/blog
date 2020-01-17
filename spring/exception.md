@@ -29,11 +29,14 @@ HandlerExceptionResolver 只能捕获 @Controller 层发生的异常（包括 @C
 ```java
 // 可以配置拦截指定的类或者包等
 // @RestControllerAdvice 相当于 @ExceptionHandler + @ResponseBody
+// basePackageClasses 指定类所在的包，可以添加一个空类或接口表示一个包。
+// 可以不指定包名，默认拦截所有指定的异常
 @RestControllerAdvice(basePackageClasses = HelloWorldController.class)
 public class AppExceptionHandlerAdvice {
 
     // 配置拦截的错误类型
     // 这里也可以返回 ModelAndView 导向错误视图
+    // 不指定异常则根据参数进行拦截
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> responseEntity(Exception e) {
         HttpHeaders headers = new HttpHeaders();
