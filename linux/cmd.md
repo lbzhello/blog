@@ -6,3 +6,6 @@
 --strip-components n 去除文件层级 n
 
 ## curl 
+
+## tail
+tail -f xxx.log 实时打印出最新的变动
