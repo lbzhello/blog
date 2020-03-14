@@ -39,3 +39,33 @@
 Reactive响应式编程提出了一种更高级的抽象，将数据的处理方式沉淀到可复用的库之后可以提高开发的效率。
 
 [tosee](https://yq.aliyun.com/articles/617709)
+
+## From 不支持异步
+
+```java
+@Test
+    public void fromTest() {
+        Flux.from((Publisher<String>) it -> {
+            it.onNext("22");
+            it.onNext("23");
+//            it.onError(new Throwable("error"));
+            it.onNext("24");
+            it.onComplete();
+            // from 不支持异步 用 create, 上面 it 会报空指针异常
+        }).publishOn(Schedulers.newElastic("my")).map(it -> {
+            System.out.println(it);
+            return it;
+        }).subscribe(it -> {
+            System.out.println("subscribe:" + it);
+        }, e -> {
+            System.out.println(e.getMessage());
+        }, () -> {
+            System.out.println("end");
+        });
+    }
+```
+
+## publish & subscribe
+
+publish：修改下一个运算符运行所在线程
+subscribe：设定默认的线程，与所在位置无关
