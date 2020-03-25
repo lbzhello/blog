@@ -8,6 +8,16 @@ postgres 自带的 web 管理页面
 
 postgres 命令行 shell
 
+打开后，Server, Database, Port, Username 不输入代表默认括号中的选项。然后输入密码即可。
+
+```sh
+Server [localhost]:
+Database [postgres]:
+Port [5432]:
+Username [postgres]:
+用户 postgres 的口令：
+```
+
 ### 常用命令
 
 ```shell
@@ -38,6 +48,11 @@ postgres 命令行 shell
 # 从 file 中执行命令
 \i [file] 
 ```
+
+# information_schema
+# 里面包含 pg 数据库的统计信息，表，用户，索引等
+select * from pg_catalog.pg_database 显示所有表
+select * from pg_catalog.pg_tables 显示所有表
 
 ## 数据类型
 #### 1. 基础类型
