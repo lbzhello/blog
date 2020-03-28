@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+# python 连接 pgsql
 # 导入psycopg2包
 import psycopg2
 
