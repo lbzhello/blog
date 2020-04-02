@@ -1,8 +1,108 @@
+# pom 配置详解
+
+## 基本配置
+
+```xml
+<project xmlns = "http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation = "http://maven.apache.org/POM/4.0.0
+    http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-parent</artifactId>
+		<version>2.1.8.RELEASE</version>
+		<relativePath/> <!-- lookup parent from repository -->
+	</parent>
+	
+    <groupId>com.example.demo</groupId>
+    <artifactId>project</artifactId>
+	<packaging>jar</packaging>
+    <version>1.0.0-SNAPSHOT</version>
+</project>
+```
+- modelVersion: 声明项目描述符遵循哪一个 POM 模型版本。模型本身的版本很少改变，虽然如此，但它仍然是必不可少的，这是为了当 Maven 引入了新的特性或者其他模型变更的时候，确保稳定性
+- groupId: 组标识。构建时生成的路径也是由此生成， 如 com.mycompany.app 生成包的相对路径为：/com/mycompany/app
+- artifactId: 构件标识。它和 groupID 一起唯一标识一个构件
+- version：项目版本
+- packaging: 打包类型，常用的有 jar, war, pom（最简单的打包类型，没有java代码，也不执行任何代码，只是为了聚合工程或传递依赖用的）等，插件可以创建他们自己的构件类型
+- parent: 父项目的坐标。子项目会继承父项目的 dependencies, properties 等配置，也可以根据需要重写；类似于 java, 只支持单继承，但可以通过 dependencyManagement 突破这个限制，下文会说 
+
+## properties
+pom 常量，后面可以用 ${java.version} 引用常量值
+```xml
+<properties>
+	<java.version>1.8</java.version>
+</properties>
+```
+
+## dependencies
+项目相关依赖配置，如果在父项目写的依赖，会被子项目引用
+```xml
+<dependencies>
+	<dependency>
+		<groupId>org.apache.maven</groupId>
+		<artifactId>maven-artifact</artifactId>
+		<version>3.8.1</version>
+		<!-- 依赖类型，默认类型是jar。它通常表示依赖的文件的扩展名，但也有例外。一个类型可以被映射成另外一个扩展名或分类器。类型经常和使用的打包方式对应， 
+			尽管这也有例外。一些类型的例子：jar，war，ejb-client和test-jar。如果设置extensions为 true，就可以在 plugin里定义新的类型。所以前面的类型的例子不完整。 -->
+		<type>jar</type>
+		<!-- 依赖的分类器。分类器可以区分属于同一个POM，但不同构建方式的构件。分类器名被附加到文件名的版本号后面。例如，如果你想要构建两个单独的构件成 
+			JAR，一个使用Java 1.4编译器，另一个使用Java 6编译器，你就可以使用分类器来生成两个单独的JAR构件。 -->
+		<classifier></classifier>
+		<!--依赖范围。在项目发布过程中，帮助决定哪些构件被包括进来。欲知详情请参考依赖机制。 - compile ：默认范围，用于编译 - provided：类似于编译，但支持你期待jdk或者容器提供，类似于classpath 
+			- runtime: 在执行时需要使用 - test: 用于test任务时使用 - system: 需要外在提供相应的元素。通过systemPath来取得 
+			- systemPath: 仅用于范围为system。提供相应的路径 - optional: 当项目自身被依赖时，标注依赖是否传递。用于连续依赖时使用 -->
+		<scope>test</scope>
+		<!--仅供system范围使用。注意，不鼓励使用这个元素，并且在新的版本中该元素可能被覆盖掉。该元素为依赖规定了文件系统上的路径。需要绝对路径而不是相对路径。推荐使用属性匹配绝对路径，例如${java.home}。 -->
+		<systemPath></systemPath>
+		<!--当计算传递依赖时， 从依赖构件列表里，列出被排除的依赖构件集。即告诉maven你只依赖指定的项目，不依赖项目的依赖。此元素主要用于解决版本冲突问题 -->
+		<exclusions>
+			<exclusion>
+				<artifactId>spring-core</artifactId>
+				<groupId>org.springframework</groupId>
+			</exclusion>
+		</exclusions>
+		<!--可选依赖，如果你在项目B中把C依赖声明为可选，你就需要在依赖于B的项目（例如项目A）中显式的引用对C的依赖。可选依赖阻断依赖的传递性。 -->
+		<optional>true</optional>
+	</dependency>
+</dependencies>
+```
+
+## dependencyManagement
+依赖声明。配置写法同 dependencies，不同之处在于它只声明依赖而不引入，子项目引入依赖时，可以只提供 groupID 和 artifactID，其他的可以从这里继承
+```xml
+<!-- 继承自该项目的所有子项目的默认依赖信息。这部分的依赖信息不会被立即解析,而是当子项目声明一个依赖（必须描述 groupID 和 artifactID
+     信息），如果group ID和artifact ID以外的一些信息没有描述，则通过group ID和artifact ID 匹配到这里的依赖，并使用这里的依赖信息。 -->
+<dependencyManagement>
+	<dependencies>
+		<dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot</artifactId>
+		<!-- 子项目引入依赖时可以省略版本号 -->
+        <version>2.1.8.RELEASE</version>
+    </dependency>
+	
+	<dependency>
+		<groupId>com.hikvision.starfish</groupId>
+		<artifactId>starfish-dependencies</artifactId>
+		<version>${starfish.version}</version>
+		<!-- 只有 dependencyManagement 可以有 pom 类型，dependencyManagement 用来声明子项目的依赖
+		     而 maven 只能单继承，声明为 pom 类型可以使它的 dependencyManagement 对当前项目有效
+		-->
+		<type>pom</type>
+		<scope>import</scope>
+	</dependency>
+</dependencies>
+</dependencyManagement>
+```
+
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0http://maven.apache.org/maven-v4_0_0.xsd">
-    <!--父项目的坐标。如果项目中没有规定某个元素的值，那么父项目中的对应值即为项目的默认值。 坐标包括group ID，artifact ID和 
+    
+	<!--父项目的坐标。如果项目中没有规定某个元素的值，那么父项目中的对应值即为项目的默认值。 坐标包括group ID，artifact ID和 
         version。 -->
-    <parent>
+	<parent>
         <!--被继承的父项目的构件标识符 -->
         <artifactId />
         <!--被继承的父项目的全球唯一标识符 -->
@@ -13,17 +113,15 @@
             目的pom，其次在文件系统的这个位置（relativePath位置），然后在本地仓库，最后在远程仓库寻找父项目的pom。 -->
         <relativePath />
     </parent>
-    <!--声明项目描述符遵循哪一个POM模型版本。模型本身的版本很少改变，虽然如此，但它仍然是必不可少的，这是为了当Maven引入了新的特性或者其他模型变更的时候，确保稳定性。 -->
-    <modelVersion>4.0.0</modelVersion>
     <!--项目的全球唯一标识符，通常使用全限定的包名区分该项目和其他项目。并且构建时生成的路径也是由此生成， 如com.mycompany.app生成的相对路径为：/com/mycompany/app -->
     <groupId>asia.banseon</groupId>
     <!-- 构件的标识符，它和group ID一起唯一标识一个构件。换句话说，你不能有两个不同的项目拥有同样的artifact ID和groupID；在某个 
         特定的group ID下，artifact ID也必须是唯一的。构件是项目产生的或使用的一个东西，Maven为项目产生的构件包括：JARs，源 码，二进制发布和WARs等。 -->
     <artifactId>banseon-maven2</artifactId>
+	<!--项目当前版本，格式为:主版本.次版本.增量版本-限定版本号 -->
+    <version>1.0-SNAPSHOT</version>
     <!--项目产生的构件类型，例如jar、war、ear、pom。插件可以创建他们自己的构件类型，所以前面列的不是全部构件类型 -->
     <packaging>jar</packaging>
-    <!--项目当前版本，格式为:主版本.次版本.增量版本-限定版本号 -->
-    <version>1.0-SNAPSHOT</version>
     <!--项目的名称, Maven产生的文档用 -->
     <name>banseon-maven</name>
     <!--项目主页的URL, Maven产生的文档用 -->
@@ -31,142 +129,62 @@
     <!-- 项目的详细描述, Maven 产生的文档用。 当这个元素能够用HTML格式描述时（例如，CDATA中的文本会被解析器忽略，就可以包含HTML标 
         签）， 不鼓励使用纯文本描述。如果你需要修改产生的web站点的索引页面，你应该修改你自己的索引页文件，而不是调整这里的文档。 -->
     <description>A maven project to study maven.</description>
-    <!--描述了这个项目构建环境中的前提条件。 -->
-    <prerequisites>
-        <!--构建该项目或使用该插件所需要的Maven的最低版本 -->
-        <maven />
-    </prerequisites>
-    <!--项目的问题管理系统(Bugzilla, Jira, Scarab,或任何你喜欢的问题管理系统)的名称和URL，本例为 jira -->
-    <issueManagement>
-        <!--问题管理系统（例如jira）的名字， -->
-        <system>jira</system>
-        <!--该项目使用的问题管理系统的URL -->
-        <url>http://jira.baidu.com/banseon</url>
-    </issueManagement>
-    <!--项目持续集成信息 -->
-    <ciManagement>
-        <!--持续集成系统的名字，例如continuum -->
-        <system />
-        <!--该项目使用的持续集成系统的URL（如果持续集成系统有web接口的话）。 -->
-        <url />
-        <!--构建完成时，需要通知的开发者/用户的配置项。包括被通知者信息和通知条件（错误，失败，成功，警告） -->
-        <notifiers>
-            <!--配置一种方式，当构建中断时，以该方式通知用户/开发者 -->
-            <notifier>
-                <!--传送通知的途径 -->
-                <type />
-                <!--发生错误时是否通知 -->
-                <sendOnError />
-                <!--构建失败时是否通知 -->
-                <sendOnFailure />
-                <!--构建成功时是否通知 -->
-                <sendOnSuccess />
-                <!--发生警告时是否通知 -->
-                <sendOnWarning />
-                <!--不赞成使用。通知发送到哪里 -->
-                <address />
-                <!--扩展配置项 -->
-                <configuration />
-            </notifier>
-        </notifiers>
-    </ciManagement>
-    <!--项目创建年份，4位数字。当产生版权信息时需要使用这个值。 -->
-    <inceptionYear />
-    <!--项目相关邮件列表信息 -->
-    <mailingLists>
-        <!--该元素描述了项目相关的所有邮件列表。自动产生的网站引用这些信息。 -->
-        <mailingList>
-            <!--邮件的名称 -->
-            <name>Demo</name>
-            <!--发送邮件的地址或链接，如果是邮件地址，创建文档时，mailto: 链接会被自动创建 -->
-            <post>banseon@126.com</post>
-            <!--订阅邮件的地址或链接，如果是邮件地址，创建文档时，mailto: 链接会被自动创建 -->
-            <subscribe>banseon@126.com</subscribe>
-            <!--取消订阅邮件的地址或链接，如果是邮件地址，创建文档时，mailto: 链接会被自动创建 -->
-            <unsubscribe>banseon@126.com</unsubscribe>
-            <!--你可以浏览邮件信息的URL -->
-            <archive>http:/hi.baidu.com/banseon/demo/dev/</archive>
-        </mailingList>
-    </mailingLists>
-    <!--项目开发者列表 -->
-    <developers>
-        <!--某个项目开发者的信息 -->
-        <developer>
-            <!--SCM里项目开发者的唯一标识符 -->
-            <id>HELLO WORLD</id>
-            <!--项目开发者的全名 -->
-            <name>banseon</name>
-            <!--项目开发者的email -->
-            <email>banseon@126.com</email>
-            <!--项目开发者的主页的URL -->
-            <url />
-            <!--项目开发者在项目中扮演的角色，角色元素描述了各种角色 -->
-            <roles>
-                <role>Project Manager</role>
-                <role>Architect</role>
-            </roles>
-            <!--项目开发者所属组织 -->
-            <organization>demo</organization>
-            <!--项目开发者所属组织的URL -->
-            <organizationUrl>http://hi.baidu.com/banseon</organizationUrl>
-            <!--项目开发者属性，如即时消息如何处理等 -->
-            <properties>
-                <dept>No</dept>
-            </properties>
-            <!--项目开发者所在时区， -11到12范围内的整数。 -->
-            <timezone>-5</timezone>
-        </developer>
-    </developers>
-    <!--项目的其他贡献者列表 -->
-    <contributors>
-        <!--项目的其他贡献者。参见developers/developer元素 -->
-        <contributor>
-            <name />
-            <email />
-            <url />
-            <organization />
-            <organizationUrl />
-            <roles />
-            <timezone />
-            <properties />
-        </contributor>
-    </contributors>
-    <!--该元素描述了项目所有License列表。 应该只列出该项目的license列表，不要列出依赖项目的 license列表。如果列出多个license，用户可以选择它们中的一个而不是接受所有license。 -->
-    <licenses>
-        <!--描述了项目的license，用于生成项目的web站点的license页面，其他一些报表和validation也会用到该元素。 -->
-        <license>
-            <!--license用于法律上的名称 -->
-            <name>Apache 2</name>
-            <!--官方的license正文页面的URL -->
-            <url>http://www.baidu.com/banseon/LICENSE-2.0.txt</url>
-            <!--项目分发的主要方式： repo，可以从Maven库下载 manual， 用户必须手动下载和安装依赖 -->
-            <distribution>repo</distribution>
-            <!--关于license的补充信息 -->
-            <comments>A business-friendly OSS license</comments>
-        </license>
-    </licenses>
-    <!--SCM(Source Control Management)标签允许你配置你的代码库，供Maven web站点和其它插件使用。 -->
-    <scm>
-        <!--SCM的URL,该URL描述了版本库和如何连接到版本库。欲知详情，请看SCMs提供的URL格式和列表。该连接只读。 -->
-        <connection>
-            scm:svn:http://svn.baidu.com/banseon/maven/banseon/banseon-maven2-trunk(dao-trunk)
-        </connection>
-        <!--给开发者使用的，类似connection元素。即该连接不仅仅只读 -->
-        <developerConnection>
-            scm:svn:http://svn.baidu.com/banseon/maven/banseon/dao-trunk
-        </developerConnection>
-        <!--当前代码的标签，在开发阶段默认为HEAD -->
-        <tag />
-        <!--指向项目的可浏览SCM库（例如ViewVC或者Fisheye）的URL。 -->
-        <url>http://svn.baidu.com/banseon</url>
-    </scm>
-    <!--描述项目所属组织的各种属性。Maven产生的文档用 -->
-    <organization>
-        <!--组织的全名 -->
-        <name>demo</name>
-        <!--组织主页的URL -->
-        <url>http://www.baidu.com/banseon</url>
-    </organization>
+	
+	<!-- pom 常量，后面可以用 ${java.version} 引用常量值 -->
+	<properties>
+		<java.version>1.8</java.version>
+	</properties>
+    
+	<!-- 有些maven项目会做成多模块的，这个标签用于指定当前项目所包含的所有模块。之后对这个项目进行的maven操作，会让所有子模块也进行相同操作。 -->
+    <modules>
+        <!--子项目相对路径-->
+        <module></module>
+    </modules> 
+	
+	<!--该元素描述了项目相关的所有依赖。 这些依赖组成了项目构建过程中的一个个环节。它们自动从项目定义的仓库中下载。要获取更多信息，请看项目依赖机制。 -->
+    <dependencies>
+        <dependency>
+            <!--依赖的group ID -->
+            <groupId>org.apache.maven</groupId>
+            <!--依赖的artifact ID -->
+            <artifactId>maven-artifact</artifactId>
+            <!--依赖的版本号。 在Maven 2里, 也可以配置成版本号的范围。 -->
+            <version>3.8.1</version>
+            <!-- 依赖类型，默认类型是jar。它通常表示依赖的文件的扩展名，但也有例外。一个类型可以被映射成另外一个扩展名或分类器。类型经常和使用的打包方式对应， 
+                尽管这也有例外。一些类型的例子：jar，war，ejb-client和test-jar。如果设置extensions为 true，就可以在 plugin里定义新的类型。所以前面的类型的例子不完整。 -->
+            <type>jar</type>
+            <!-- 依赖的分类器。分类器可以区分属于同一个POM，但不同构建方式的构件。分类器名被附加到文件名的版本号后面。例如，如果你想要构建两个单独的构件成 
+                JAR，一个使用Java 1.4编译器，另一个使用Java 6编译器，你就可以使用分类器来生成两个单独的JAR构件。 -->
+            <classifier></classifier>
+            <!--依赖范围。在项目发布过程中，帮助决定哪些构件被包括进来。欲知详情请参考依赖机制。 - compile ：默认范围，用于编译 - provided：类似于编译，但支持你期待jdk或者容器提供，类似于classpath 
+                - runtime: 在执行时需要使用 - test: 用于test任务时使用 - system: 需要外在提供相应的元素。通过systemPath来取得 
+                - systemPath: 仅用于范围为system。提供相应的路径 - optional: 当项目自身被依赖时，标注依赖是否传递。用于连续依赖时使用 -->
+            <scope>test</scope>
+            <!--仅供system范围使用。注意，不鼓励使用这个元素，并且在新的版本中该元素可能被覆盖掉。该元素为依赖规定了文件系统上的路径。需要绝对路径而不是相对路径。推荐使用属性匹配绝对路径，例如${java.home}。 -->
+            <systemPath></systemPath>
+            <!--当计算传递依赖时， 从依赖构件列表里，列出被排除的依赖构件集。即告诉maven你只依赖指定的项目，不依赖项目的依赖。此元素主要用于解决版本冲突问题 -->
+            <exclusions>
+                <exclusion>
+                    <artifactId>spring-core</artifactId>
+                    <groupId>org.springframework</groupId>
+                </exclusion>
+            </exclusions>
+            <!--可选依赖，如果你在项目B中把C依赖声明为可选，你就需要在依赖于B的项目（例如项目A）中显式的引用对C的依赖。可选依赖阻断依赖的传递性。 -->
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+	
+	<!-- 继承自该项目的所有子项目的默认依赖信息。这部分的依赖信息不会被立即解析,而是当子项目声明一个依赖（必须描述group ID和 artifact 
+        ID信息），如果group ID和artifact ID以外的一些信息没有描述，则通过group ID和artifact ID 匹配到这里的依赖，并使用这里的依赖信息。 -->
+    <dependencyManagement>
+        <dependencies>
+            <!--参见dependencies/dependency元素 -->
+            <dependency>
+                ......
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    
     <!--构建项目需要的信息 -->
     <build>
         <!--该元素设置了项目源码目录，当构建项目的时候，构建系统会编译目录里的源码。该路径是相对于pom.xml的相对路径。 -->
@@ -493,8 +511,7 @@
             <properties />
         </profile>
     </profiles>
-    <!--模块（有时称作子项目） 被构建成项目的一部分。列出的每个模块元素是指向该模块的目录的相对路径 -->
-    <modules />
+    
     <!--发现依赖和扩展的远程仓库列表。 -->
     <repositories>
         <!--包含需要连接到远程仓库的信息 -->
@@ -535,38 +552,6 @@
     </pluginRepositories>
  
  
-    <!--该元素描述了项目相关的所有依赖。 这些依赖组成了项目构建过程中的一个个环节。它们自动从项目定义的仓库中下载。要获取更多信息，请看项目依赖机制。 -->
-    <dependencies>
-        <dependency>
-            <!--依赖的group ID -->
-            <groupId>org.apache.maven</groupId>
-            <!--依赖的artifact ID -->
-            <artifactId>maven-artifact</artifactId>
-            <!--依赖的版本号。 在Maven 2里, 也可以配置成版本号的范围。 -->
-            <version>3.8.1</version>
-            <!-- 依赖类型，默认类型是jar。它通常表示依赖的文件的扩展名，但也有例外。一个类型可以被映射成另外一个扩展名或分类器。类型经常和使用的打包方式对应， 
-                尽管这也有例外。一些类型的例子：jar，war，ejb-client和test-jar。如果设置extensions为 true，就可以在 plugin里定义新的类型。所以前面的类型的例子不完整。 -->
-            <type>jar</type>
-            <!-- 依赖的分类器。分类器可以区分属于同一个POM，但不同构建方式的构件。分类器名被附加到文件名的版本号后面。例如，如果你想要构建两个单独的构件成 
-                JAR，一个使用Java 1.4编译器，另一个使用Java 6编译器，你就可以使用分类器来生成两个单独的JAR构件。 -->
-            <classifier></classifier>
-            <!--依赖范围。在项目发布过程中，帮助决定哪些构件被包括进来。欲知详情请参考依赖机制。 - compile ：默认范围，用于编译 - provided：类似于编译，但支持你期待jdk或者容器提供，类似于classpath 
-                - runtime: 在执行时需要使用 - test: 用于test任务时使用 - system: 需要外在提供相应的元素。通过systemPath来取得 
-                - systemPath: 仅用于范围为system。提供相应的路径 - optional: 当项目自身被依赖时，标注依赖是否传递。用于连续依赖时使用 -->
-            <scope>test</scope>
-            <!--仅供system范围使用。注意，不鼓励使用这个元素，并且在新的版本中该元素可能被覆盖掉。该元素为依赖规定了文件系统上的路径。需要绝对路径而不是相对路径。推荐使用属性匹配绝对路径，例如${java.home}。 -->
-            <systemPath></systemPath>
-            <!--当计算传递依赖时， 从依赖构件列表里，列出被排除的依赖构件集。即告诉maven你只依赖指定的项目，不依赖项目的依赖。此元素主要用于解决版本冲突问题 -->
-            <exclusions>
-                <exclusion>
-                    <artifactId>spring-core</artifactId>
-                    <groupId>org.springframework</groupId>
-                </exclusion>
-            </exclusions>
-            <!--可选依赖，如果你在项目B中把C依赖声明为可选，你就需要在依赖于B的项目（例如项目A）中显式的引用对C的依赖。可选依赖阻断依赖的传递性。 -->
-            <optional>true</optional>
-        </dependency>
-    </dependencies>
     <!--不赞成使用. 现在Maven忽略该元素. -->
     <reports></reports>
     <!--该元素描述使用报表插件产生报表的规范。当用户执行"mvn site"，这些报表就会运行。 在页面导航栏能看到所有报表的链接。 -->
@@ -606,16 +591,7 @@
             </plugin>
         </plugins>
     </reporting>
-    <!-- 继承自该项目的所有子项目的默认依赖信息。这部分的依赖信息不会被立即解析,而是当子项目声明一个依赖（必须描述group ID和 artifact 
-        ID信息），如果group ID和artifact ID以外的一些信息没有描述，则通过group ID和artifact ID 匹配到这里的依赖，并使用这里的依赖信息。 -->
-    <dependencyManagement>
-        <dependencies>
-            <!--参见dependencies/dependency元素 -->
-            <dependency>
-                ......
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+    
     <!--项目分发信息，在执行mvn deploy后表示要发布的位置。有了这些信息就可以把网站部署到远程服务器或者把构件部署到远程仓库。 -->
     <distributionManagement>
         <!--部署项目产生的构件到远程仓库需要的信息 -->

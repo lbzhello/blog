@@ -20,22 +20,49 @@ Maven 提倡使用一个共同的标准目录结构，Maven 使用约定优于�
 ## POM
 所有 POM 文件都需要 project 元素和三个必需字段：groupId，artifactId，version。
 ```xml
-<project xmlns = "http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi = "http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation = "http://maven.apache.org/POM/4.0.0
-    http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <!-- 模型版本, 设为 4.0.0 -->
-    <modelVersion>4.0.0</modelVersion>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+            http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-    <!-- 工程组的唯一标识, 打包放本地路径为：/com/example/demo -->
-    <groupId>com.example.demo</groupId>
+　　<!-- 基本配置 -->
+　　<modelVersion>4.0.0</modelVersion>
+　　<groupId>...</groupId>
+　　<artifactId>...</artifactId>
+　　<version>...</version>
+　　<packaging>...</packaging>
 
-    <!-- 项目的唯一ID，一个 groupId 下面可能多个项目，就是靠 artifactId 来区分的 -->
-    <!-- groupId 和 artifactId 一起定义了 artifact 在仓库中的位置 -->
-    <artifactId>project</artifactId>
+    <!-- 依赖配置 -->
+    <dependencies>...</dependencies>
+    <parent>...</parent>
+    <dependencyManagement>...</dependencyManagement>
+    <modules>...</modules>
+    <properties>...</properties>
 
-    <!-- 版本号 -->
-    <version>0.0.1-SNAPSHOT</version>
+    <!-- 构建配置 -->
+    <build>...</build>
+    <reporting>...</reporting>
+
+    <!-- 项目信息 -->
+    <name>...</name>
+    <description>...</description>
+    <url>...</url>
+    <inceptionYear>...</inceptionYear>
+    <licenses>...</licenses>
+    <organization>...</organization>
+    <developers>...</developers>
+    <contributors>...</contributors>
+
+    <!-- 环境设置 -->
+    <issueManagement>...</issueManagement>
+    <ciManagement>...</ciManagement>
+    <mailingLists>...</mailingLists>
+    <scm>...</scm>
+    <prerequisites>...</prerequisites>
+    <repositories>...</repositories>
+    <pluginRepositories>...</pluginRepositories>
+    <distributionManagement>...</distributionManagement>
+    <profiles>...</profiles>
 </project>
 ```
 
