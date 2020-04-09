@@ -1,5 +1,7 @@
 # pom 配置详解
 
+[官方文档](http://maven.apache.org/pom.html)
+
 ## 基本配置
 
 ```xml
@@ -19,6 +21,9 @@
     <artifactId>project</artifactId>
 	<packaging>jar</packaging>
     <version>1.0.0-SNAPSHOT</version>
+	
+	<name>scncg-web</name>
+	<description>scncgt-web for Spring Boot</description>
 </project>
 ```
 - modelVersion: 声明项目描述符遵循哪一个 POM 模型版本。模型本身的版本很少改变，虽然如此，但它仍然是必不可少的，这是为了当 Maven 引入了新的特性或者其他模型变更的时候，确保稳定性
@@ -33,6 +38,7 @@ pom 常量，后面可以用 ${java.version} 引用常量值
 ```xml
 <properties>
 	<java.version>1.8</java.version>
+	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 </properties>
 ```
 
@@ -70,7 +76,9 @@ pom 常量，后面可以用 ${java.version} 引用常量值
 ```
 
 ## dependencyManagement
-依赖声明。配置写法同 dependencies，不同之处在于它只声明依赖而不引入，子项目引入依赖时，可以只提供 groupID 和 artifactID，其他的可以从这里继承
+依赖声明。配置写法同 dependencies，不同之处在于它只声明依赖而不引入，子项目引入依赖时，只需提供 groupID 和 artifactID，其他的可以从这里继承
+
+这样的好处是，父项目统一了版本，而子项目可以在需要的时候才引用对应的依赖
 ```xml
 <!-- 继承自该项目的所有子项目的默认依赖信息。这部分的依赖信息不会被立即解析,而是当子项目声明一个依赖（必须描述 groupID 和 artifactID
      信息），如果group ID和artifact ID以外的一些信息没有描述，则通过group ID和artifact ID 匹配到这里的依赖，并使用这里的依赖信息。 -->
@@ -96,6 +104,63 @@ pom 常量，后面可以用 ${java.version} 引用常量值
 </dependencies>
 </dependencyManagement>
 ```
+
+## build
+
+#### resources
+https://blog.csdn.net/u011781521/article/details/79052725
+构建Maven项目的时候，如果没有进行特殊的配置，Maven会按照标准的目录结构查找和处理各种类型文件。
+- src/main/java和src/test/java 
+这两个目录中的所有 *.java 文件会分别在 comile 和 test-comiple 阶段被编译，编译结果分别放到了 target/classes 和 targe/test-classes 目录中，但是这两个目录中的其他文件都会被忽略掉。
+- src/main/resouces和src/test/resources
+这两个目录中的文件也会分别被复制到target/classes和target/test-classes目录中。
+- target/classes
+打包插件默认会把这个目录中的所有内容打入到jar包或者war包中。
+```xml
+<build>
+    <resources>
+        <resource>
+            <directory>${project.basedir}/libs</directory>
+            <targetPath>BOOT-INF/lib/</targetPath>
+			<includes>
+			   <!-- directory 中所有 .jar 结尾的文件  -->
+			   <include>**/*.jar</include>
+			</includes>
+        </resource>
+        <resource>
+            <directory>src/main/java</directory>
+            <includes>
+                <include>**/*.xml</include>
+            </includes>
+			<excludes>  
+				<exclude>**/*.yaml</exclude>  
+			</excludes>
+			<!-- filter 替换文件中 ${key} 的变量值为 profile/properties 中配置的属性值 -->
+            <filter>true</filter>
+        </resource>
+		
+        <resource>
+			<!-- 默认resources目录下的文件都会被打包 -->
+            <directory>src/main/resources</directory>
+        </resource>
+		<!-- 默认resources目录下的文件都会被打包，如果想resources目录下的xml文件不被打包，可通过如下配置 -->
+		<resource>  
+            <directory>src/main/resources</directory>  
+            <includes>  
+                <include>*.properties</include>  <!--打包properties文件-->
+            </includes>  
+            <excludes>  
+                <exclude>*.xml</exclude>  <!--过滤xml与yaml文件-->
+                <exclude>*.yaml</exclude>  
+            </excludes>  
+        </resource>  
+    </resources>
+</build>
+```
+
+#### 
+
+## plugins
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0http://maven.apache.org/maven-v4_0_0.xsd">
