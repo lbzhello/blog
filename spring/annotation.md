@@ -7,3 +7,21 @@
 ## Spring Boot Configuration Processor 自动补全
 
 ## ConfigurationPropertiesBinding 自定义类型转换器
+
+## @RunWith 
+JUnit 会使用它提供的类代替 JUnit 内建的 runner
+
+示例，SpringRunner
+```java
+@RunWith(SpringRunner.class)
+@ContextConfiguration(classes = AppConfig.class) // 用于提供配置类
+public class LocalTest {
+	@Autowired
+	private AppConfig appConfig;
+	
+	@Test
+    public void localTest() throws IOException {
+        appConfig.sayHello();
+    }
+}
+```
