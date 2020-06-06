@@ -25,3 +25,9 @@ public class LocalTest {
     }
 }
 ```
+
+## @RequestBody
+请求数据为 json 格式时需要加
+
+## @RequestParam
+获取 url 路径中的参数

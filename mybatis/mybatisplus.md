@@ -1,6 +1,8 @@
 [mybatis-plus的使用 ------ 入门](https://www.jianshu.com/p/ceb1df475021)
 
-https://blog.csdn.net/weixin_42577140/article/details/89841799
+[Mybatis-plus函数及用法实例](https://blog.csdn.net/weixin_42577140/article/details/89841799)
+
+[Mybatis-Plus使用全解](https://blog.csdn.net/weixin_33850015/article/details/92431309)
 
 <plugin>
 	<groupId>org.mybatis.generator</groupId>

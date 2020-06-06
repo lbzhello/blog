@@ -67,7 +67,47 @@ Reactive响应式编程提出了一种更高级的抽象，将数据的处理方
     }
 ```
 
-## publish & subscribe
+## Publisher.subscribe(Subscriber)
+支持被压，调用 request 后流程才会开始
+onSubscribe -> Subscription#request（背压） -> onNext -> onSuccess -> onComplete
 
-publish：修改下一个运算符运行所在线程
-subscribe：设定默认的线程，与所在位置无关
+## publishOn & subscribeOn
+
+publishOn：修改下一个运算符运行所在线程
+subscribeOn：设定默认的线程，与所在位置无关
+
+## subscribe
+这里规定 subscribe 的第一个参数称为 consumer, 第二个参数称为 errorConsumer, 第三个参数称为 completeConsumer
+
+consumer 发生的异常不会被 onErrorContinue 捕获，可以被 errorConsumer 捕获，此时
+
+### doOnError
+处理错误，但不捕获（异常会调到 errorConsumer 处理，走异常流程）,当存在 onErrorContinue （无论在之前或之后调用）时，此函数不会生效，
+会直接由 onErrorContinue 处理。
+
+### onErrorContinue
+处理并且捕获异常，后面不会调用 errorConsumer，算正常流程
+
+onErrorContinue 只能捕获它之前的异常
+
+onErrorContinue 不能捕获 doOnEach 的异常， doOnEach 的异常可以被 doOnError 处理，最终被 errorConsumer 捕获。
+
+### errorConsumer
+errorConsumer 指 subscribe 的第二个参数
+
+## doOnEach 
+每次 publisher 发射一个事件，调用一次
+
+发射的事件包括：onNext， onError, onComplete
+
+doOnEach 发生的异常不会被 onErrorContinue 捕获，但可以被 doOnError 处理，然后被 errorConsumer 捕获。
+
+## doOnNext
+每次发射一个 onNext 事件，调用一次
+
+## doFinally 
+当发布事件结束（正常或异常）时调用。
+注意：当 consumer 发生异常时，会先调用 doFinally 在调用 errorConsumer。
+正常流程 -> consumer -> onComplete -> doFinally
+异常流程 -> doOnError -> errorConsumer -> doFinally
+consumer 发生异常 -> consumer -> doFinally -> errorConsumer
