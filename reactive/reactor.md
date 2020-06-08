@@ -3,12 +3,15 @@
 ## 相关文档
 1. [Reactor Reference Guide](https://projectreactor.io/docs/core/release/reference/)
 
+2. [RxJava 从入门到放弃再到不离不弃](https://www.zdltech.com/archives/1428.html)
 
 2. [（11）照虎画猫深入理解响应式流规范——响应式Spring的道法术器](https://blog.csdn.net/get_set/article/details/79514670)
 
 3. [Reactor Mono和Flux 进行反应式编程详解](https://blog.csdn.net/ZYC88888/article/details/103679605)
 
-参考： [Reactive(1) 从响应式编程到"好莱坞"](https://www.cnblogs.com/littleatp/p/11386487.html)
+4. [Reactive(1) 从响应式编程到"好莱坞"](https://www.cnblogs.com/littleatp/p/11386487.html)
+
+5. [教你轻松理解Rxjava之线程切换流程(observeOn与subscribeOn)](https://blog.csdn.net/wenyingzhi/article/details/80453464)
 
 ## 响应式系统宣言
 [响应式系统宣言](https://www.reactivemanifesto.org/)
@@ -46,35 +49,99 @@ Reactive响应式编程提出了一种更高级的抽象，将数据的处理方
 
 ```java
 @Test
-    public void fromTest() {
-        Flux.from((Publisher<String>) it -> {
-            it.onNext("22");
-            it.onNext("23");
+public void fromTest() {
+	Flux.from((Publisher<String>) it -> {
+		it.onNext("22");
+		it.onNext("23");
 //            it.onError(new Throwable("error"));
-            it.onNext("24");
-            it.onComplete();
-            // from 不支持异步 用 create, 上面 it 会报空指针异常
-        }).publishOn(Schedulers.newElastic("my")).map(it -> {
-            System.out.println(it);
-            return it;
-        }).subscribe(it -> {
-            System.out.println("subscribe:" + it);
-        }, e -> {
-            System.out.println(e.getMessage());
-        }, () -> {
-            System.out.println("end");
-        });
-    }
+		it.onNext("24");
+		it.onComplete();
+		// from 不支持异步 用 create, 上面 it 会报空指针异常
+	}).publishOn(Schedulers.newElastic("my")).map(it -> {
+		System.out.println(it);
+		return it;
+	}).subscribe(it -> {
+		System.out.println("subscribe:" + it);
+	}, e -> {
+		System.out.println(e.getMessage());
+	}, () -> {
+		System.out.println("end");
+	});
+}
 ```
 
+# 示例
+下面的实例，在Observable.OnSubscribe的call()中模拟了长时间获取数据过程，在Subscriber的noNext()中显示数据到UI。
+```java
+Observable.create(new Observable.OnSubscribe<String>() {
+     @Override
+     public void call(Subscriber<? super String> subscriber) {
+         subscriber.onNext("info1");
+  
+         SystemClock.sleep(2000);
+         subscriber.onNext("info2-sleep 2s");
+  
+         SystemClock.sleep(3000);
+         subscriber.onNext("info2-sleep 3s");
+  
+         SystemClock.sleep(5000);
+         subscriber.onCompleted();
+     }
+ })
+.subscribeOn(Schedulers.io()) //指定 subscribe() 发生在 IO 线程
+.observeOn(AndroidSchedulers.mainThread()) //指定 Subscriber 的回调发生在主线程
+.subscribe(new Subscriber<String>() {
+    @Override
+    public void onCompleted() {
+        Log.v(TAG, "onCompleted()");
+    }
+  
+    @Override
+    public void onError(Throwable e) {
+        Log.v(TAG, "onError() e=" + e);
+    }
+  
+    @Override
+    public void onNext(String s) {
+        showInfo(s); //UI view显示数据
+    }
+});
+```
+
+至此，我们可以看到call()将会发生在 IO 线程，而showInfo(s)则被设定在了主线程。这就意味着，即使加载call()耗费了几十甚至几百毫秒的时间，也不会造成丝毫界面的卡顿。
+
+## 线程控制
+- subscribeOn(): 指定 subscribe() 所发生的线程，即 Observable.OnSubscribe 被激活时所处的线程。或者叫做事件产生的线程。
+- observeOn(): 指定 Subscriber 所运行在的线程。或者叫做事件消费的线程。
+注意：observeOn() 指定的是 Subscriber 的线程，而这个 Subscriber 并不一定是 subscribe() 参数中的 Subscriber（这块参考RxJava变换部分），而是 observeOn() 执行时的当前 Observable 所对应的 Subscriber ，即它的直接下级 Subscriber 。
+
+换句话说，observeOn() 指定的是它之后的操作所在的线程。因此如果有多次切换线程的需求，只要在每个想要切换线程的位置调用一次 observeOn() 即可。
+
 ## Publisher.subscribe(Subscriber)
-支持被压，调用 request 后流程才会开始
+支持背压，调用 request 后流程才会开始
 onSubscribe -> Subscription#request（背压） -> onNext -> onSuccess -> onComplete
 
 ## publishOn & subscribeOn
 
-publishOn：修改下一个运算符运行所在线程
-subscribeOn：设定默认的线程，与所在位置无关
+先理一下基本流程。
+
+Publisher（也称 Observable, Provider）发射一系列事件，这些事件数据流经过不同的操作符处理，会被转换成不同的 Publisher 对象，
+直到最后调用 Publisher.subscribe(Subscriber) 方法与 Subscriber（也称 Observer, Consumer）发生订阅关系，从而被不同的订阅者消费掉。
+
+数据流经过运算符处理，从上一个 Publisher 流向下一个 Publisher，即【数据流的方向为**从上往下**】；
+下个的 Publisher 接收上个 Publisher 的数据流，也可以说是下个 Publisher 订阅了上个 Publisher 的数据，即【订阅的方向为**从下往上**】。
+
+总结：订阅操作向上走，数据流的操作向下走。
+
+publishOn：切换【数据流的操作符】所在线程，从上往下（数据流的方向），即每次调用 publishOn 会改变下一个
+
+subscribeOn：切换【订阅的操作符】所在线程，从下往上（订阅的方向）
+
+因此，当我们调用了subscribe的发起订阅
+
+1. 向上走,我只需要关心 subscribeOn 和订阅的操作符
+
+2. 向下走,我只需要关心 observeOn 和数据流的操作符
 
 ## subscribe
 这里规定 subscribe 的第一个参数称为 consumer, 第二个参数称为 errorConsumer, 第三个参数称为 completeConsumer
