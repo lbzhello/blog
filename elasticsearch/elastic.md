@@ -1,0 +1,1 @@
+[Elasticsearch 快速开始](https://www.e-learn.cn/content/java/1078247)
