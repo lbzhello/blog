@@ -1,0 +1,71 @@
+### 集群健康 -- green, yellow, red 三种状态
+GET http://localhost:9200/_cat/health?v
+
+### 集群的节点列表
+GET http://localhost:9200/_cat/nodes?v
+
+### 查看全部索引
+GET http://localhost:9200/_cat/indices?v
+
+### 创建一个索引 -- pretty的意思是响应（如果有的话）以JSON格式返回
+PUT http://localhost:9200/customer?pretty
+
+### 删除索引
+DELETE http://localhost:9200/customer?pretty
+
+### 创建一个文档 -- 在新建文档的时候如果指定的索引不存在则会自动创建相应的索引
+PUT http://localhost:9200/customer/_doc/1?pretty
+Content-Type: application/json
+
+{
+  "name": "John Doe"
+}
+
+### 检索文档
+GET http://localhost:9200/customer/_doc/1?pretty
+
+### 更新文档 -- 给 John Doe 加个 age 字段
+POST http://localhost:9200/customer/_update/1/?pretty
+Content-Type: application/json
+
+{
+  "doc": {
+    "name": "John Doe",
+    "age": 20
+  }
+}
+
+### 更新文档 -- 给 John Doe 的 age + 5
+### ctx._source 引用的是当前源文档
+POST http://localhost:9200/customer/_update/1?pretty
+Content-Type: application/json
+
+{
+  "script": "ctx._source.age += 5"
+}
+
+### 删除文档
+DELETE http://localhost:9200/customer/_doc/1?pretty
+
+### 批处理
+POST http://localhost:9200/customer/_doc/bulk?pretty
+Content-Type: application/json
+
+{
+  "index": {
+    "_id": "1"
+  }
+} {
+  "name": "John Doe"
+} {
+  "index": {
+    "_id": "2"
+  }
+} {
+  "name": "Jane Doe"
+}
+
+###
+
+
+
