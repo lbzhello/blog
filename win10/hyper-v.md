@@ -33,7 +33,7 @@ bcdedit /set hypervisorlaunchtype off
 如果恢复 Hyper-V
 
 ```
-bcdedit / set hypervisorlaunchtype auto
+bcdedit /set hypervisorlaunchtype auto
 ```
 
 ## 参考：
