@@ -14,3 +14,42 @@ public class AddressingUtils {
     }
 }
 ```
+2 获取 Session, Request, ServletContext
+
+可以通过 RequestContextHolder 获取
+
+```java
+public class RequestUtils {
+    /**
+     * 获取 request
+     * @return
+     */
+    public static HttpServletRequest getRequest() {
+        return ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+    }
+
+    /**
+     * 获取 Session
+     * @return
+     */
+    public static HttpSession getSession() {
+        return getRequest().getSession();
+    }
+
+    /**
+     * 获取 ServletContext
+     * @return
+     */
+    public static ServletContext getServletContext() {
+        return getSession().getServletContext();
+    }
+
+    /**
+     * 获取 session 属性值
+     * @return
+     */
+    public static Account getAccout() {
+        return (Account) getSession().getAttribute("account");
+    }
+}
+```

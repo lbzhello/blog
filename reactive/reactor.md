@@ -36,8 +36,10 @@
 按序处理
 异步地传递元素
 实现非阻塞的负压(back-pressure)
-负压这个概念或许有些陌生，但本质是为了协调流的处理能力提出的，对于流处理来说会分为 Publisher(发布者) 和Subscriber(订阅者)两个角色，可看做生产者与消费者的模式。当发布者产生的消息过快时，订阅者的处理速度可能会跟不上，此时可能会导致一系列的系统问题。 因此负压的目的就是定义一种反馈机制，让订阅者(消费方)向发布者告知其自身的状态(包括处理速度)，
-尽可能让发布方作出调整，本质上是一种系统自我保护的手段。 说到这里，不得不想到TCP的 MTU协商了
+负压这个概念或许有些陌生，但本质是为了协调流的处理能力提出的，对于流处理来说会分为 Publisher(发布者) 和Subscriber(订阅者)两个角色，
+可看做生产者与消费者的模式。当发布者产生的消息过快时，订阅者的处理速度可能会跟不上，此时可能会导致一系列的系统问题。 因此负压的目的
+就是定义一种反馈机制，让订阅者(消费方)向发布者告知其自身的状态(包括处理速度)，尽可能让发布方作出调整，本质上是一种系统自我保护的手段。 
+说到这里，不得不想到TCP的 MTU协商了
 
 ## 为什么要使用Reactive
 
@@ -45,30 +47,73 @@ Reactive响应式编程提出了一种更高级的抽象，将数据的处理方
 
 [tosee](https://yq.aliyun.com/articles/617709)
 
+## 发布-订阅模式（Publish-Subscribe）& 观察者模式（Observer） & 生产者（producer）-消费者（consumer）模式
+所谓模式，就是在某种场景下，一类问题及其解决方案的总结归纳。
+
+生产者消费者模式：生产者将消息发送到消息中心，消费者从消息中心获取消息进行消费。
+
+发布订阅模式：发布者将事件（或者说消息）发送到消息中心，订阅者从消息中心订阅自己感兴趣的消息。生产者和消费者完全解耦。
+
+观察者模式（Observer）: 观察者（Observer）订阅被观察者（Observable），事件来临时，被观察者直接将事件发送给观察者。生产者和消费者有所关联。
+
+生产者消费者模式是这一类模式的通称；
+
+如果将消息分类（topic, queue），消费者只处理自己感兴趣的消息，那么便可称之为发布订阅模式；
+
+如果去掉消息中心，生产者直接将消息发送给消费者，则可称之为观察者模式。
+
+一般情况，pub-sub 模式和 observer 区别就是有没有消息中心。
+
+然而有时也将观察者模式等同于发布订阅模式（不做严格区分）。
+
+因此不用过于纠结某种方案究竟是哪种模式，心里总体有个概念就可以了。
+
+模式是解决问题的方案，模式本身不应该成为问题。
+
 ## From 不支持异步
 
 ```java
 @Test
-public void fromTest() {
-	Flux.from((Publisher<String>) it -> {
-		it.onNext("22");
-		it.onNext("23");
-//            it.onError(new Throwable("error"));
-		it.onNext("24");
-		it.onComplete();
-		// from 不支持异步 用 create, 上面 it 会报空指针异常
-	}).publishOn(Schedulers.newElastic("my")).map(it -> {
-		System.out.println(it);
-		return it;
-	}).subscribe(it -> {
-		System.out.println("subscribe:" + it);
-	}, e -> {
-		System.out.println(e.getMessage());
-	}, () -> {
-		System.out.println("end");
-	});
+public void onTest() {
+	Flux
+			.create(it -> {
+				TestHelper.printCurrentThread("create");
+				it.next(1);
+				it.complete();
+			})
+			.doOnSubscribe(it -> TestHelper.printCurrentThread("doOnSubscribe1"))
+			.subscribeOn(Schedulers.newElastic("subscribeOn1"))
+			.doOnSubscribe(it -> TestHelper.printCurrentThread("doOnSubscribe2"))
+			.subscribeOn(Schedulers.newElastic("subscribeOn2"))
+			.doOnNext(it -> TestHelper.printCurrentThread("doOnNext1"))
+			.publishOn(Schedulers.newElastic("publishOn1"))
+			.doOnSubscribe(it -> TestHelper.printCurrentThread("doOnSubscribe3"))
+			.doOnNext(it -> TestHelper.printCurrentThread("doOnNext2"))
+			.subscribe(it -> TestHelper.printCurrentThread("subscribe"));
 }
 ```
+> TestHelper.printCurrentThread 仅打印当前线程。
+
+结果如下：
+```
+【doOnSubscribe3】 method running in thread: <<main>>
+【doOnSubscribe2】 method running in thread: <<subscribeOn2-5>>
+【doOnSubscribe1】 method running in thread: <<subscribeOn1-6>>
+【create】 method running in thread: <<subscribeOn1-6>>
+【doOnNext1】 method running in thread: <<subscribeOn1-6>>
+【doOnNext2】 method running in thread: <<publishOn1-4>>
+【subscribe】 method running in thread: <<publishOn1-4>>
+```
+先从下往上看，只关注订阅操作符：
+doOnSubscribe3 运行时并没有调用 subscribeOn 指定线程，因此运行在 main;
+doOnSubscribe2 下面调用 subscribeOn 指定了线程 subscribeOn2，因此运行在 subscribeOn2；
+doOnSubscribe1 下面调用 subscribeOn 指定了线程 subscribeOn1, 因此运行在 subscribeOn1；
+create         下面调用 subscribeOn 指定了线程 subscribeOn1, 因此运行在 subscribeOn1；
+
+调用 create 后处于线程 subscribeOn1，从上往下看， 只关注数据流运算符：
+doOnNext1 上面没有调用 publishOn 指定线程，因此运行在 subscribeOn1;
+doOnNext2 上面调用 publishOn 指定了线程 publishOn1，因此运行在 publishOn1;
+subscribe 上面调用 publishOn 指定了线程 publishOn1，因此运行在 publishOn1;
 
 # 示例
 下面的实例，在Observable.OnSubscribe的call()中模拟了长时间获取数据过程，在Subscriber的noNext()中显示数据到UI。
@@ -126,22 +171,60 @@ onSubscribe -> Subscription#request（背压） -> onNext -> onSuccess -> onComp
 先理一下基本流程。
 
 Publisher（也称 Observable, Provider）发射一系列事件，这些事件数据流经过不同的操作符处理，会被转换成不同的 Publisher 对象，
-直到最后调用 Publisher.subscribe(Subscriber) 方法与 Subscriber（也称 Observer, Consumer）发生订阅关系，从而被不同的订阅者消费掉。
+直到最后调用 Publisher.subscribe(Subscriber) 与 Subscriber（也称 Observer, Consumer）发生订阅关系，从而被不同的订阅者消费掉。
 
-数据流经过运算符处理，从上一个 Publisher 流向下一个 Publisher，即【数据流的方向为**从上往下**】；
-下个的 Publisher 接收上个 Publisher 的数据流，也可以说是下个 Publisher 订阅了上个 Publisher 的数据，即【订阅的方向为**从下往上**】。
+数据流经过运算符处理，从上游 Publisher 流向下游 Publisher，即数据流的方向为**从上往下**，下游 Publisher 接收上游 Publisher 的数据，即订阅的方向为**从下往上**
 
 总结：订阅操作向上走，数据流的操作向下走。
 
-publishOn：切换【数据流的操作符】所在线程，从上往下（数据流的方向），即每次调用 publishOn 会改变下一个
+publishOn：切换【数据流的操作符】所在线程，即从上往下（数据流的方向），每次调用 publishOn 会改变下游的数据流运算符所在线程。
 
-subscribeOn：切换【订阅的操作符】所在线程，从下往上（订阅的方向）
+subscribeOn：切换【订阅的操作符】所在线程，即从下往上（订阅的方向），每次调用 subscribeOn 会改变上游的订阅操作符所在线程。
 
-因此，当我们调用了subscribe的发起订阅
+因此，当我们调用了 subscribe 的发起订阅
 
 1. 向上走,我只需要关心 subscribeOn 和订阅的操作符
 
 2. 向下走,我只需要关心 observeOn 和数据流的操作符
+
+【订阅运算符】：从 onSubscribe（不包括）开始，到发射元素之前的所有操作。比如：create, doOnSubscribe, doOnRequest
+【数据流运算符】：从发射元素开始，到订阅结束之间的操作。比如： map, filter, flatMap, subscribe
+
+注意： onSubscribe 及之前的操作都发生在主线程（当前线程）中。
+
+示例：
+```java
+@Test
+public void threadTest() {
+	Flux.create(it -> {
+		TestHelper.printCurrentThread("from");
+		it.next(1);
+		it.complete();
+	})
+
+			.doOnSubscribe(it -> {
+				TestHelper.printCurrentThread("doOnSubscribe1");
+			})
+			.subscribeOn(Schedulers.newElastic("subscribeOnThread1"))
+			.doOnSubscribe(it -> {
+				TestHelper.printCurrentThread("doOnSubscribe2");
+			})
+			.subscribeOn(Schedulers.newElastic("subscribeOnThread2"))
+			.doOnNext(it -> {
+				TestHelper.printCurrentThread("doOnNext1");
+			})
+			.publishOn(Schedulers.newElastic("publishOnThread1"))
+			.doOnSubscribe(it -> {
+				TestHelper.printCurrentThread("doOnSubscribe3");
+			})
+			.doOnNext(it -> {
+				TestHelper.printCurrentThread("doOnNext2");
+			})
+			.subscribe(it -> {
+				TestHelper.printCurrentThread("subscribe");
+			});
+}
+```
 
 ## subscribe
 这里规定 subscribe 的第一个参数称为 consumer, 第二个参数称为 errorConsumer, 第三个参数称为 completeConsumer
@@ -162,6 +245,9 @@ onErrorContinue 不能捕获 doOnEach 的异常， doOnEach 的异常可以被 d
 ### errorConsumer
 errorConsumer 指 subscribe 的第二个参数
 
+create 方法抛出的异常可以被它捕获。
+from 方法抛出的异常无法捕获
+
 ## doOnEach 
 每次 publisher 发射一个事件，调用一次
 
@@ -178,3 +264,8 @@ doOnEach 发生的异常不会被 onErrorContinue 捕获，但可以被 doOnErro
 正常流程 -> consumer -> onComplete -> doFinally
 异常流程 -> doOnError -> errorConsumer -> doFinally
 consumer 发生异常 -> consumer -> doFinally -> errorConsumer
+
+## flatMap
+每个流会单独计算并返回，因此可以实现最快计算。
+
+

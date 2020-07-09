@@ -1,3 +1,21 @@
+## @RunWith 
+JUnit 会使用它提供的类代替 JUnit 内建的 runner
+
+示例，SpringRunner
+```java
+@RunWith(SpringRunner.class)
+@ContextConfiguration(classes = AppConfig.class) // 用于提供配置类
+public class LocalTest {
+	@Autowired
+	private AppConfig appConfig;
+	
+	@Test
+    public void localTest() throws IOException {
+        appConfig.sayHello();
+    }
+}
+```
+
 ## Mock
 
 ## mock 是什么
@@ -30,3 +48,4 @@ public class LocalTest {
     }
 }
 ```
+
