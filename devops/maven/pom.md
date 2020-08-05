@@ -99,6 +99,7 @@ pom 常量，后面可以用 ${java.version} 引用常量值
 		     而 maven 只能单继承，声明为 pom 类型可以使它的 dependencyManagement 对当前项目有效
 		-->
 		<type>pom</type>
+		<!--import scope只能用在dependencyManagement里面-->
 		<scope>import</scope>
 	</dependency>
 </dependencies>

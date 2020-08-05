@@ -13,3 +13,15 @@
 
 
 [spring cache 学习 —— @Cacheable 使用详解](https://www.cnblogs.com/coding-one/p/12401630.html)
+
+[Spring Boot Cache使用与整合](https://www.cnblogs.com/ejiyuan/p/11014765.html)
+
+(springboot中redis做缓存时的配置)[https://www.cnblogs.com/carrychan/p/12089811.html]
+
+## CacheManager
+可以通过 cacheManager 指定 Cacheable 所用的缓存
+
+## 缓存失效
+```java
+cacheManager.getCache(SERVICE_DISCOVERY_CACHE).evict(componentId + "." + segmentId);
+```

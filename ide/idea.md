@@ -25,3 +25,22 @@ Content-Type: multipart/form-data
 < G:\tmp.txt
 --null--
 ```
+
+## idea 初次配置
+
+## tab placement 
+【操作】：ctrl + shift + a -> 输入 "tab placement" -> none
+
+这样工作区只会显示一个 editor 窗口，非常简洁。可以配合下面快捷键使用：
+
+- ctrl + tab：上个编辑的文件
+- ctrl + e：最近编辑的文件，然后点击上下键选择
+
+## 项目编码
+【操作】：ctrl + shift + a -> 输入 "file encodings" -> 全部选择 "utf-8"
+
+Tips: Properties Files 有个 "Transparent native-to-ascii conversion" 选项，表示将 unicode 字符转码成 ascii 格式，如 "\u00df"
+
+勾选后 -> 添加中文注释 -> 去勾选 -> 显示为 "\u00ab" 格式 -> 再勾选 -> 显示正常
+
+参见(这里)[https://www.jianshu.com/p/11932ce51284]

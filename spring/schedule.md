@@ -3,3 +3,6 @@
 
 ## 狐疑事项
 Schedule 默认单线程，这里配置多个线程可以并发执行
+
+## cron 验证
+[在线Cron表达式生成器](https://www.matools.com/cron/)
