@@ -4,3 +4,7 @@
 方法3： 删除 .idea, 重新导入项目
 
 [idea无法引用jar包中的class](https://www.cnblogs.com/alvwood/p/10944912.html)
+
+## 符号不存在
+
+File -> Project Structure -> Modules 看看是否有多个项目，删掉无用的。或者调整一下项目，重新 Mark as 一下，指定成 Sources
