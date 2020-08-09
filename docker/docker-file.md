@@ -5,7 +5,7 @@ RUN curl -O redis.tar.gz "http://download.redis.io/releases/redis-5.0.3.tar.gz"
 RUN tar -zxvf redis.tar.gz
 COPY redis.conf /opt/
 ```
-
+  
 ## FROM
 指定构建时（docker build ...）的基镜像
 
