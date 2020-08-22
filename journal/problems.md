@@ -29,5 +29,3 @@ spring cache 原理 CacheManager + Cache
 
 可能项目其他地方配置了 CacheManager ?
 
-- 缓存失效
-- cacheManager.getCache(SERVICE_DISCOVERY_CACHE).evict(componentId + "." + segmentId);

@@ -49,6 +49,10 @@
 
 ![依赖](/resources/img/uml/dependency.png)
 
+## 其他
+
+https://blog.csdn.net/fly_zxy/article/details/80911942
+
 ----
 
 **参考**：[UML各种图总结-精华](https://www.cnblogs.com/jiangds/p/6596595.html)
