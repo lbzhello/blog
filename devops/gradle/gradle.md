@@ -36,4 +36,54 @@ hello world!
 
 上面的脚本定义了一个叫做 hello 的 task，并且给它添加了一个动作。当执行 gradle hello 的时候, Gralde 便会去调用 hello 这个任务来执行给定操作。
 
-[](https://www.cnblogs.com/mooreliu/p/4849898.html)
+## idea gradle 下载缓慢的问题
+
+在项目的 gradle/wrapper/gradle-wrapper.properties 下有如下配置
+
+```prop
+distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionUrl=https\://services.gradle.org/distributions/gradle-6.5.1-all.zip
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+```
+
+先下载 gradle zip 包，将 **distributionUrl** 指向本地 zip 位置   
+
+```prop
+distributionUrl=file:///D:/Software/gradle/gradle-6.5.1-all.zip
+```
+
+## implementation 和 compile
+
+a --依赖--> b --依赖--> c
+
+如果 b 中 implementation c, a 无法访问 c 提供的接口，即**将该依赖隐藏在内部，而不对外部公开**
+
+## allprojects
+所有项目共享配置
+
+## subprojects
+子项目共享配置
+
+## ext
+统一管理版本号
+
+```
+ext {
+    junitVersion = "4.11"
+    springVersion = "4.3.3.RELEASE"
+    jacksonVersion = "2.4.4"
+    compileJava.options.encoding = 'UTF-8'
+    compileTestJava.options.encoding = 'UTF-8'
+}
+```
+引用：
+```
+项目版本:
+def cfg = rootProject.ext.configuration
+cfg.compileVersion
+库版本:
+def libs = rootProject.ext.libraries
+${libs.retrofit}
+```
