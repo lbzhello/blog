@@ -44,3 +44,8 @@ GET http://localhost:9200/_cat/health?v
 
 （画外音：副本是针对索引而言的，同时需要注意索引和节点数量没有关系，我们说2个副本指的是索引被复制了2次，而1个索引可能由5个分片组成，那么在这种情况下，集群中的分片数应该是 5 × (1 + 2) = 15 ）
 
+
+## 文档
+[官网文档](https://www.elastic.co/guide/cn/elasticsearch/guide/current/index.html)
+
+[中文社区](https://elasticsearch.cn/)
