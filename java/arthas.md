@@ -113,3 +113,6 @@ cache location  : /Users/gehui/logs/arthas-cache/28198/2
 请勿同时开启过多的后台异步命令，以免对目标JVM性能造成影响
 
 如果不想停止arthas，继续执行后台任务，可以执行 quit 退出arthas控制台（stop 会停止arthas 服务）
+
+## 原理
+基于 Instrument JVMTI 组件，可以以代理的方式访问和修改 java 虚拟机内部的数据 （171）
