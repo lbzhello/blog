@@ -42,7 +42,7 @@ boundary 指定的字符串用于分割不同的部分。如果传输的是文�
 POST http://www.example.com HTTP/1.1 
 Content-Type: application/json;charset=utf-8 
 
-{"title":"test","sub":[1,2,3]} 
+{"title":"test","sub":[1,2,3]}
 ```
 
 #### text/xml
@@ -62,3 +62,15 @@ Content-Type: text/xml
     </params> 
 </methodcall> 
 ```
+
+#### raw
+可以上传任意格式的文本，可以上传text、json、xml、html等
+
+```
+POST http://www.example.com HTTP/1.1 
+
+{"title":"test","sub":[1,2,3]}
+```
+
+#### binary
+相当于 Content-Type:application/octet-stream, 从字面意思得知，只可以上传二进制数据，通常用来上传文件，由于没有键值，所以，一次只能上传一个文件。

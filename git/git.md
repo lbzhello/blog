@@ -31,4 +31,20 @@ git log --author="zhangxiao20" --since='2020-06-04' --until='2020-06-15' --prett
 ```
 
 
+## git stash
+
+暂存工作区代码，后面执行 git pull 拉取远程代码后，可以使用 git stash pop 恢复暂存的代码
+
+## resotre
+恢复文件
+
+```sh
+# 错误删除文件
+rm -f hello.c
+# 恢复删除的文件
+git restore hello.c  
+# 恢复暂存区的文件
+git restore --staged .
+```
+
 [Git 天天用 但是 Git 原理你了解吗？](https://blog.csdn.net/ljk126wy/article/details/101064186)

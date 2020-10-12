@@ -23,3 +23,50 @@
 		</dependency>
 	</dependencies>
 </plugin>
+
+## 查询时typeHandler 不生效问题
+
+@TableName 的 autoResultMap 设为 true
+
+```java
+@Getter
+@Setter
+@TableName(autoResultMap = true)
+public class TbOcr {
+    @TableId(type = IdType.AUTO)
+    private Integer id;
+	
+	@TableField(typeHandler = JsonbTypeHandler.class)
+	private Object jsonField;
+}
+```
+
+typeHandler
+
+```java
+public class JsonbTypeHandler implements TypeHandler {
+    @Override
+    public void setParameter(PreparedStatement ps, int i, Object parameter, JdbcType jdbcType) throws SQLException {
+        PGobject ext = new PGobject();
+        ext.setType("jsonb");
+        ext.setValue(String.valueOf(parameter));
+        ps.setObject(i, ext);
+    }
+
+    @Override
+    public Object getResult(ResultSet rs, String columnName) throws SQLException {
+        String json = rs.getString(columnName);
+        return json;
+    }
+
+    @Override
+    public Object getResult(ResultSet rs, int columnIndex) throws SQLException {
+        return null;
+    }
+
+    @Override
+    public Object getResult(CallableStatement cs, int columnIndex) throws SQLException {
+        return null;
+    }
+}
+```
