@@ -131,3 +131,4 @@ docker container prune
 docker image prune
 ```
 
+#### exec
