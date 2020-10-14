@@ -20,4 +20,6 @@ http 头缓冲区太小，设置
 
 server. maxHttpHeaderSize=32KB
 
-##
+## GET POST
+
+HTTP 并未规定不可以 GET 中发送 Body
