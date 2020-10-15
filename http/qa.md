@@ -20,4 +20,8 @@ http 头缓冲区太小，设置
 
 server. maxHttpHeaderSize=32KB
 
-##
+## GET POST
+那么，GET和POST的区别和应用？这问题挺复杂。简而言之，就是“安全”和“不安全”的区别。什么是安全？不用承担责任。什么是不安全？可能需要承担责任。**GET应该用于安全请求的规范。**
+
+[关于在GET请求中使用body](https://blog.csdn.net/HermitSun/article/details/89889743)
+HTTP 并未规定不可以 GET 中发送 Body
