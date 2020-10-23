@@ -166,6 +166,7 @@ Observable.create(new Observable.OnSubscribe<String>() {
 支持背压，调用 request 后流程才会开始
 onSubscribe -> Subscription#request（背压） -> onNext -> onSuccess -> onComplete
 
+> Subscriber#onSubscribe 方法始终运行在当前线程，不受线程调度管理
 ## publishOn & subscribeOn
 
 先理一下基本流程。

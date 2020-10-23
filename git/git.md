@@ -51,3 +51,13 @@ git restore --staged .
 
 [Git 天天用 但是 Git 原理你了解吗？](https://blog.csdn.net/ljk126wy/article/details/101064186)
 [git-tips](https://github.com/jaywcjlove/git-tips)
+
+## push
+
+```
+# 将本地 dev 分支提交到远程 dev 分支
+git push origin dev
+
+# 拉去远程 dev 分支到本地 dev 分支
+git pull origin dev
+```
