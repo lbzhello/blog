@@ -33,7 +33,7 @@
 其中，对于响应式流的处理环节又做了如下定义：
 
 具有处理无限数量的元素的能力，即允许流永不结束
-按序处理
+按序处理（单个流）
 异步地传递元素
 实现非阻塞的负压(back-pressure)
 负压这个概念或许有些陌生，但本质是为了协调流的处理能力提出的，对于流处理来说会分为 Publisher(发布者) 和Subscriber(订阅者)两个角色，
@@ -166,7 +166,6 @@ Observable.create(new Observable.OnSubscribe<String>() {
 支持背压，调用 request 后流程才会开始
 onSubscribe -> Subscription#request（背压） -> onNext -> onSuccess -> onComplete
 
-> Subscriber#onSubscribe 方法始终运行在当前线程，不受线程调度管理
 ## publishOn & subscribeOn
 
 先理一下基本流程。
@@ -192,7 +191,7 @@ subscribeOn：切换【订阅的操作符】所在线程，即从下往上（订
 【数据流运算符】：从发射元素开始，到订阅结束之间的操作。比如： map, filter, flatMap, subscribe
 
 注意： onSubscribe 及之前的操作都发生在主线程（当前线程）中。
-
+> Subscriber#onSubscribe 方法始终运行在当前线程，不受线程调度管理
 示例：
 ```java
 @Test
