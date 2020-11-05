@@ -61,3 +61,16 @@ git push origin dev
 # 拉去远程 dev 分支到本地 dev 分支
 git pull origin dev
 ```
+
+## clean
+
+清理本地没有加入到 git 的文件，又是后 pull 会报错 The following untracked working tree files would be overwritten by checkout
+
+
+```
+git clean -dx
+```
+
+-d **删除**未添加到 git 的文件，**注意文件是否还需要**
+-x 
+-f 强制执行，不会提示
