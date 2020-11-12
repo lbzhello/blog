@@ -1,4 +1,5 @@
-## 
+## 概念（维基百科）
+反应式编程 (reactive programming) 是一种基于数据流 (data stream) 和 变化传递 (propagation of change) 的声明式 (declarative) 的编程范式。
 
 ## 相关文档
 1. [Reactor Reference Guide](https://projectreactor.io/docs/core/release/reference/)

@@ -32,6 +32,7 @@ git log --author="zhangxiao20" --since='2020-06-04' --until='2020-06-15' --prett
 
 
 ## git stash
+[git stash 用法总结和注意点](https://www.cnblogs.com/zndxall/archive/2018/09/04/9586088.html)
 
 暂存工作区代码，后面执行 git pull 拉取远程代码后，可以使用 git stash pop 恢复暂存的代码
 
@@ -74,3 +75,31 @@ git clean -dx
 -d **删除**未添加到 git 的文件，**注意文件是否还需要**
 -x 
 -f 强制执行，不会提示
+
+## checkout
+
+切换分支
+
+#### 将另一个分支的某些文件合并到当前分支
+
+[「小技巧」使用Git从其他分支merge个别文件](https://www.cnblogs.com/coderxx/p/11544550.html)
+
+```sh
+$ git branch
+  * A  
+    B
+    
+$ git checkout B message.html message.css message.js other.js
+
+$ git status
+# On branch A
+# Changes to be committed:
+#   (use "git reset HEAD <file>..." to unstage)
+#
+#    new file:   message.css
+#    new file:   message.html
+#    new file:   message.js
+#    modified:   other.js
+```
+
+**注意：**这样会覆盖 A 分支文件，可以从 A 拉一个新分支 A_temp，在 A_temp 上 merge B 分支修改，在切换到 A 执行  git checkout A_temp message.html，这样就可以保留修改的文件
