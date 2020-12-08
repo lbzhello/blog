@@ -1,0 +1,46 @@
+$sql queryDangers params
+    select $baseColumn() from t_sd_dangerous_event_data
+    $if param.dateTime != null 
+        where date_time >= ${param.dateTime}
+    $end
+
+    $if StringUtils.isNotEmpty(params.types)
+        and types in ${StringUtils.join(params.types, ',', '(', ')')}
+    $end
+
+    left join (
+        select * from t_entrance where
+    $if params.dangerousList != null 
+        
+    $end
+$end
+
+$sql baseColumn
+    name, age
+$end
+
+## 标识字符串 explain()
+sql queryDangers params
+    #select $baseColumn() from t_sd_dangerous_event_data
+    if param.dateTime != null 
+        num = 3 * params.size()
+        #where date_time >= ${param.dateTime}
+    end
+
+    if StringUtils.isNotEmpty(params.types)
+        #and types in ${StringUtils.join(params.types, ',', '(', ')')}
+    end
+
+    #left join (
+    #select * from t_entrance where
+    if params.dangerousList != null 
+        #where name not in ${params.dangerousList}    
+    end
+    #)
+end
+
+sql baseColumn
+    #name, age
+end
+
+foo.getLmd() | explain | it.name | it.age
