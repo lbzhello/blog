@@ -132,7 +132,7 @@ git cherry-pick <commitHash>
 
 去过 cherry-pick 过程中发生冲突， cherry-pick 会停下来，让用户决定如何继续
 
-1. --continue 用户解决代码冲突后，第一步将修改的文件重新加入暂存区（git add .），第二步使用此命令，让 Cherry pick 过程继续执行。
+1. --continue 用户解决代码冲突后，第一步将修改的文件重新加入暂存区（git add .），第二步使用此 ```git cherry-pick --continue``` 命令，让 Cherry pick 过程继续执行。
 2. --abort 发生代码冲突后，放弃合并，回到操作前的样子。
 3. --quit 发生代码冲突后，退出 Cherry pick，但是不回到操作前的样子。
 
@@ -146,3 +146,16 @@ git push origin --delete dev
 ```
 git branch -d dev
 ```
+
+## rebase
+https://www.cnblogs.com/FineDay/p/10905836.html
+合并多个 commit
+
+```
+git rebase -i [commitId]
+```
+> 要将最近的 2 个 commit 合并成一个，则 commitId 为第三次的 commitId
+
+**选项**
+pick 的意思是要会执行这个 commit
+squash 的意思是这个 commit 会被合并到前一个commit

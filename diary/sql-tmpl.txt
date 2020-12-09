@@ -5,11 +5,12 @@ $sql queryDangers params
     $end
 
     $if StringUtils.isNotEmpty(params.types)
+        $num = 4 * params.size()
         and types in ${StringUtils.join(params.types, ',', '(', ')')}
     $end
 
-    left join (
-        select * from t_entrance where
+    left join ( $selectUserInfo(34) ) as u
+        
     $if params.dangerousList != null 
         
     $end
@@ -17,6 +18,10 @@ $end
 
 $sql baseColumn
     name, age
+$end
+
+$sql selectUserInfo uid
+    select id, name, age from user where id = $uid
 $end
 
 ## 标识字符串 explain()
