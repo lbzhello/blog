@@ -49,3 +49,28 @@ sql baseColumn
 end
 
 foo.getLmd() | explain | it.name | it.age
+
+andy template
+``
+
+template queryDangers params 
+    select $baseColumn() from t_sd_dangerous_event_data
+    $if param.dateTime != null 
+        where date_time >= ${param.dateTime}
+    $end
+
+    $if StringUtils.isNotEmpty(params.types)
+        $num = 4 * params.size()
+        and types in ${StringUtils.join(params.types, ',', '(', ')')}
+    $end
+
+    left join ( $selectUserInfo(34) ) as u
+        
+    $if params.dangerousList != null 
+        
+    $end
+end
+
+template baseColumn
+    name, age
+end
