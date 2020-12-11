@@ -53,7 +53,7 @@ foo.getLmd() | explain | it.name | it.age
 andy template
 ``
 
-template queryDangers params 
+template queryDangers params:UserQo p2:MailQo<User>
     select $baseColumn() from t_sd_dangerous_event_data
     $if param.dateTime != null 
         where date_time >= ${param.dateTime}
