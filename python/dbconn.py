@@ -24,6 +24,5 @@ for row in rows:
 # 关闭游标
 cursor.close()
 
-
 # 关闭数据库连接
 conn.close()
