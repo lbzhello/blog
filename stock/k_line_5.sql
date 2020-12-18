@@ -1,17 +1,19 @@
 drop table if exists k_line_5;
 create table k_line_5 (
 	stock_code integer not null,
+	start_time timestamp(0) with time zone not null default now(),
+	end_time timestamp(0) with time zone not null default now(),
 	open numeric(7, 2) not null default 0.00,
 	close numeric(7, 2) not null default 0.00,
 	high numeric(7, 2) not null default 0.00,
 	low numeric(7, 2) not null default 0.00,
 	volume integer not null default 0,
 	turnover integer not null default 0,
-	volume_ratio numeric(6, 2) not null default 0,
-	turnover_rate numeric(4, 2) not null default 0.00,
-	committee numeric(5, 2) not null default 0,
-	selling integer not null default 0,
-	buying integer not null default 0
+	volume_ratio numeric(6, 2) not null default 0.00,
+	turnover_rate numeric(6, 2) not null default 0.00,
+	committee numeric(5, 2) not null default 0.00,
+	selling numeric(14, 2) not null default 0.00,
+	buying numeric(14, 2) not null default 0.00
 );
 
 alter table k_line_5 add constraint k_line_5_pk primary key (stock_code);
