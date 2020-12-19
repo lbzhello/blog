@@ -12,7 +12,7 @@ cursor = conn.cursor()
 
 
 # 执行SQL SELECT命令
-cursor.execute("select * from log")
+cursor.execute("select * from k_line_5")
 
 
 # 获取SELECT返回的元组
