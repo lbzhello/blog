@@ -105,7 +105,7 @@ $ git status
 
 **注意：**这样会覆盖 A 分支文件，可以从 A 拉一个新分支 A_temp，在 A_temp 上 merge B 分支修改，在切换到 A 执行  git checkout A_temp message.html，这样就可以保留修改的文件
 
-##### 用一个分支的代码覆盖另一个分支
+## 用一个分支的代码覆盖另一个分支
 
 如：当前分支是maser分支，我想讲paytest分支上的代码完全覆盖master分支，首先切换到master分支。
 ```
@@ -117,7 +117,7 @@ $ git status
 git push -f
 ```
 
-#### cherry-pick
+## cherry-pick
 http://www.ruanyifeng.com/blog/2020/04/git-cherry-pick.html
 对于多分支的代码库，将代码从一个分支转移到另一个分支是常见需求。
 
@@ -159,3 +159,34 @@ git rebase -i [commitId]
 **选项**
 pick 的意思是要会执行这个 commit
 squash 的意思是这个 commit 会被合并到前一个commit
+
+[git rebase和git merge的区别](http://blog.sina.com.cn/s/blog_14c2211450102vp66.html)
+
+```sh
+# 合并 branchName 的改动到当前分支 
+git rebase branchName
+```
+
+**git rebase 遇到冲突**
+1. 解决冲突
+2. git add <修改>
+3. git rebase —continue #继续操作；或者 git rebase —skip 忽略冲突；或者 git rebase —abort 撤销 rebase 操作
+
+## merge
+```sh
+git merge branch-name
+```
+
+**git merge 遇到冲突**
+1. 解决冲突
+2. git add <修改>
+3. git commit #继续执行 merge
+
+## revert
+
+```sh
+git revert -n commit-id
+```
+
+回退 commit-id 提交，-n 表示不自动提交
+
