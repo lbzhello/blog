@@ -96,3 +96,6 @@ dependencies {
     compile project(":b")
 } 
 ```
+
+## 参考
+[gradle基础配置](https://www.cnblogs.com/woms/p/7040771.html)
