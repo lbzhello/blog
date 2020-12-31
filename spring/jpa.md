@@ -19,3 +19,6 @@ springboot 基于自动配置，如果启动类位于根目录下，则不需要
 
 - @Entity A 继承 @MappedSuperclass B
 保存 A 时会将继承自 B 的字段同时保存到 A; B 不会生成表信息
+
+##
+[SpringBoot中JPA的基本使用](https://blog.csdn.net/weixin_39020878/article/details/110008230)

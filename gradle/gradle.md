@@ -87,3 +87,12 @@ cfg.compileVersion
 def libs = rootProject.ext.libraries
 ${libs.retrofit}
 ```
+
+## 统一project(p), a 模块 引入 b 模块
+先在 p 中的 settings.gradle 中声明子模块, 然后在 a 的 build.gradle 中声明对 b 的依赖
+
+```
+dependencies { 
+    compile project(":b")
+} 
+```

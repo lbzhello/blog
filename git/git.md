@@ -162,11 +162,10 @@ squash 的意思是这个 commit 会被合并到前一个commit
 
 [git rebase和git merge的区别](http://blog.sina.com.cn/s/blog_14c2211450102vp66.html)
 
+## 合并 b 的改动到当前分支
 ```sh
-# 合并 branchName 的改动到当前分支 
-git rebase branchName
+git rebase b
 ```
-
 **git rebase 遇到冲突**
 1. 解决冲突
 2. git add <修改>
