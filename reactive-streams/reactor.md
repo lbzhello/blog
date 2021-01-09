@@ -14,6 +14,8 @@
 
 5. [教你轻松理解Rxjava之线程切换流程(observeOn与subscribeOn)](https://blog.csdn.net/wenyingzhi/article/details/80453464)
 
+6. [Reactor响应式编程真的不来了解一下吗？](https://zhuanlan.zhihu.com/p/157489510) 
+
 ## 响应式系统宣言
 [响应式系统宣言](https://www.reactivemanifesto.org/)
 
@@ -167,6 +169,42 @@ Observable.create(new Observable.OnSubscribe<String>() {
 支持背压，调用 request 后流程才会开始
 onSubscribe -> Subscription#request（背压） -> onNext -> onSuccess -> onComplete
 
+```java
+Flux.range(1, 100)
+		.subscribe(new Subscriber<Integer>() {
+			private Subscription subscription;
+			private int count = 0;
+			private int BATCH_SIZE = 10; // 消费者处理速度
+
+			@Override
+			public void onSubscribe(Subscription s) {
+				subscription = s;
+				s.request(BATCH_SIZE); // 必须调用此方法订阅者才开始处理数据
+			}
+
+			@Override
+			public void onNext(Integer integer) {
+				count++;
+				System.out.println(integer);
+				if (count >= BATCH_SIZE) {
+					count = 0; // 从新计数
+					System.out.println("request more " + BATCH_SIZE);
+					subscription.request(BATCH_SIZE); // 处理完成，继续请求更多的数据
+				}
+			}
+
+			@Override
+			public void onError(Throwable t) {
+				System.out.println("onError");
+			}
+
+			@Override
+			public void onComplete() {
+				System.out.println("onComplete");
+			}
+		});
+```
+
 ## publishOn & subscribeOn
 
 先理一下基本流程。
@@ -268,5 +306,4 @@ consumer 发生异常 -> consumer -> doFinally -> errorConsumer
 
 ## flatMap
 每个流会单独计算并返回，因此可以实现最快计算。
-
 
