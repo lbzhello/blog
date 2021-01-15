@@ -99,3 +99,4 @@ dependencies {
 
 ## 参考
 [gradle基础配置](https://www.cnblogs.com/woms/p/7040771.html)
+[Gradle构建SpringBoot多模块项目](https://my.oschina.net/itsaysay/blog/3095846)
