@@ -201,3 +201,15 @@ git branch -vv
 # 设置本地分支master跟踪origin/<branch>远程分支
 git branch --set-upstream-to=origin/<branch> master
 ```
+
+## diff
+
+## 两个分支文件差异
+git diff <分支名> <分支名> -- 文件名
+git diff branch1 branch2 -- path/file.txt
+
+## 显示出所有有差异的文件的详细差异
+git diff branch1 branch2 --stat
+
+## 显示出branch1和branch2中差异的部分
+git diff branch1 branch2 --stat
