@@ -44,3 +44,12 @@ Tips: Properties Files 有个 "Transparent native-to-ascii conversion" 选项，
 勾选后 -> 添加中文注释 -> 去勾选 -> 显示为 "\u00ab" 格式 -> 再勾选 -> 显示正常
 
 参见(这里)[https://www.jianshu.com/p/11932ce51284]
+
+## Codota (Tabnine 支持更多）
+代码，提示，补全，示例
+
+## JRebel
+> https://jrebel.qekang.com/18f8e60d-bb37-4a20-b316-f15ae20f1428
+[IDEA插件-热部署:JRebel](https://blog.csdn.net/u014395955/article/details/106938527/)
+
+修改代码后 Ctrl + Shift + F9

@@ -3,17 +3,17 @@ create table k_line (
 	stock_code integer not null,
 	start_time timestamp(0) with time zone not null default now(),
 	end_time timestamp(0) with time zone not null default now(),
-	open numeric(7, 2) not null default 0.00,
-	close numeric(7, 2) not null default 0.00,
-	high numeric(7, 2) not null default 0.00,
-	low numeric(7, 2) not null default 0.00,
+	open decimal(7, 2) not null default 0.00,
+	close decimal(7, 2) not null default 0.00,
+	high decimal(7, 2) not null default 0.00,
+	low decimal(7, 2) not null default 0.00,
 	volume integer not null default 0,
-	turnover numeric(14, 2) not null default 0.00,
-	volume_ratio numeric(6, 2) not null default 0.00,
-	turnover_rate numeric(6, 2) not null default 0.00,
-	committee numeric(5, 2) not null default 0.00,
-	selling numeric(14, 2) not null default 0.00,
-	buying numeric(14, 2) not null default 0.00
+	turnover decimal(14, 2) not null default 0.00,
+	volume_ratio decimal(6, 2) not null default 0.00,
+	turnover_rate decimal(6, 2) not null default 0.00,
+	committee decimal(5, 2) not null default 0.00,
+	selling decimal(14, 2) not null default 0.00,
+	buying decimal(14, 2) not null default 0.00
 );
 
 alter table k_line add constraint k_line_pk primary key (stock_code);
